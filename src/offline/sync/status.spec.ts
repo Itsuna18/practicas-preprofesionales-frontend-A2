@@ -21,4 +21,17 @@ describe('sync status store', () => {
     setStatus({ online: true })
     expect(listener).toHaveBeenCalledTimes(1)
   })
+
+  it('transmite los cambios de estado a otras pestañas por BroadcastChannel', async () => {
+    const remoteChannel = new BroadcastChannel('sync-status')
+    const received = new Promise((resolve) => {
+      remoteChannel.onmessage = (event) => resolve(event.data)
+    })
+
+    setStatus({ pending: 7 })
+
+    await expect(received).resolves.toMatchObject({ pending: 7 })
+    remoteChannel.close()
+  })
+
 })

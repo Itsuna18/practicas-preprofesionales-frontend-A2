@@ -3,7 +3,7 @@ import { db } from '@/offline/db'
 import { pullChanges } from './pull'
 import { pushOutbox } from './push'
 import { startSync, syncNow } from './scheduler'
-import { getStatus, subscribe } from './status'
+import { getStatus, setStatus, subscribe } from './status'
 
 
 vi.mock('./pull', () => ({ pullChanges: vi.fn() }))
@@ -18,6 +18,7 @@ beforeEach(async () => {
   localStorage.clear()
   mockedPull.mockReset()
   mockedPush.mockReset()
+  setStatus({ syncing: false, pending: 0 })
 })
 
 describe('syncNow', () => {
@@ -104,6 +105,17 @@ describe('syncNow', () => {
     )
     expect(estadoInconsistente).toBeUndefined()
   })
+
+  it('no arranca una sincronización si el estado ya dice que otra pestaña está sincronizando', async () => {
+    localStorage.setItem('access_token', 'tok')
+    setStatus({ syncing: true })
+
+    await syncNow()
+
+    expect(mockedPull).not.toHaveBeenCalled()
+    expect(mockedPush).not.toHaveBeenCalled()
+  })
+
 })
 
 describe('startSync', () => {
