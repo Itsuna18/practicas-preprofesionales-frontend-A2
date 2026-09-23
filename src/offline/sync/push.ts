@@ -30,35 +30,31 @@ export async function enqueue(
 
 const MAX_RETRIES = 5
 
+async function handleExhaustedEntries(exhausted: OutboxEntry[]): Promise<void> {
+  if (exhausted.length === 0) return
+
+  await db.transaction('rw', [db.outbox, db.hourLogs], async () => {
+    for (const e of exhausted) {
+      const rowId = e.payload.id
+      if (typeof rowId === 'number') {
+        await db.hourLogs.update(rowId, {
+          syncState: 'failed',
+          reviewNote: e.lastError || 'Máximo de reintentos alcanzado',
+        })
+      }
+    }
+    await db.outbox.bulkDelete(exhausted.map((e) => e.id as number))
+  })
+}
+
 export async function pushOutbox(): Promise<{ applied: number; failed: number }> {
   const allEntries = await db.outbox.orderBy('createdAt').limit(500).toArray()
   if (allEntries.length === 0) return { applied: 0, failed: 0 }
 
-  const validEntries: OutboxEntry[] = []
-  const exhaustedEntries: OutboxEntry[] = []
+  const validEntries = allEntries.filter((e) => e.attempts < MAX_RETRIES)
+  const exhaustedEntries = allEntries.filter((e) => e.attempts >= MAX_RETRIES)
 
-  for (const e of allEntries) {
-    if (e.attempts >= MAX_RETRIES) {
-      exhaustedEntries.push(e)
-    } else {
-      validEntries.push(e)
-    }
-  }
-
-  if (exhaustedEntries.length > 0) {
-    await db.transaction('rw', [db.outbox, db.hourLogs], async () => {
-      for (const e of exhaustedEntries) {
-        const rowId = e.payload.id
-        if (typeof rowId === 'number') {
-          await db.hourLogs.update(rowId, { 
-            syncState: 'failed', 
-            reviewNote: e.lastError || 'Máximo de reintentos alcanzado' 
-          })
-        }
-      }
-      await db.outbox.bulkDelete(exhaustedEntries.map((e) => e.id as number))
-    })
-  }
+  await handleExhaustedEntries(exhaustedEntries)
 
   if (validEntries.length === 0) return { applied: 0, failed: 0 }
 
@@ -71,8 +67,7 @@ export async function pushOutbox(): Promise<{ applied: number; failed: number }>
   }))
 
   const localIds = new Map(validEntries.map((e) => [e.clientOpId, Number(e.payload.id)]))
-
-  await db.outbox.bulkDelete(validEntries.map((e) => e.id as number))
+  const entryIdByClientOpId = new Map(validEntries.map((e) => [e.clientOpId, e.id as number]))
 
   try {
     const { results } = await api<{ results: SyncOperationResult[] }>('/sync/push', {
@@ -81,16 +76,29 @@ export async function pushOutbox(): Promise<{ applied: number; failed: number }>
     })
 
     await applyResults(results, localIds)
+
+    const idsToDelete: number[] = []
+    for (const result of results) {
+      const outboxId = entryIdByClientOpId.get(result.clientOpId)
+      if (outboxId != null) {
+        idsToDelete.push(outboxId)
+      }
+    }
+
+    if (idsToDelete.length > 0) {
+      await db.outbox.bulkDelete(idsToDelete)
+    }
+
     return {
       applied: results.filter((r) => r.status === 'applied').length,
       failed: results.filter((r) => r.status !== 'applied').length,
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    const retryEntries = validEntries.map(e => ({
+    const retryEntries = validEntries.map((e) => ({
       ...e,
       attempts: (e.attempts || 0) + 1,
-      lastError: errorMessage
+      lastError: errorMessage,
     }))
 
     await db.outbox.bulkPut(retryEntries)
