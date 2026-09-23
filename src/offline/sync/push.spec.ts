@@ -81,4 +81,35 @@ describe('pushOutbox', () => {
     await expect(db.outbox.count()).resolves.toBe(0)
     await expect(db.hourLogs.get(10)).resolves.toMatchObject({ syncState: 'synced', version: 2 })
   })
+
+  it('E1-01 (Spike): demuestra la pérdida de horas cuando la red falla a mitad del envío', async () => {
+    await db.hourLogs.put({
+      id: 11,
+      placementId: 1,
+      date: '2026-04-01',
+      startTime: '08:00',
+      endTime: '12:00',
+      hours: 4,
+      activity: 'Prácticas de campo',
+      status: 'SUBMITTED',
+      version: 1,
+      updatedAt: '2026-04-01T00:00:00.000Z',
+      syncState: 'local',
+    })
+    await enqueue({
+      entity: 'hourLog',
+      op: 'create',
+      payload: { id: 11, hours: 4 },
+      baseVersion: null,
+    })
+
+    mockedApi.mockRejectedValue(new Error('Network error / Failed to fetch'))
+
+    await expect(pushOutbox()).rejects.toThrow('Network error / Failed to fetch')
+
+    // Con el bug actual, pushOutbox borró el outbox antes de enviar a la red,
+    // por lo que count() devuelve 0 y esta expectativa falla como se pide en el Spike.
+    const remainingOutbox = await db.outbox.count()
+    expect(remainingOutbox).toBe(1)
+  })
 })
