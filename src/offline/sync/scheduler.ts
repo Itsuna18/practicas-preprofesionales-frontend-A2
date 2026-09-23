@@ -8,11 +8,25 @@ const SYNC_INTERVAL_MS = 60_000
 // responda hasMore:true cuelgue el scheduler en un bucle infinito.
 const MAX_PULL_ROUNDS = 20
 
+const MIN_BACKOFF_MS = 1000
+const MAX_BACKOFF_MS = 32000
+
+let currentSync: Promise<void> | null = null
+let backoffMs = MIN_BACKOFF_MS
+let retryTimerId: number | null = null
+let intervalId: number | null = null
+
+function clearRetryTimer() {
+  if (retryTimerId !== null) {
+    window.clearTimeout(retryTimerId)
+    retryTimerId = null
+  }
+}
+
 function hasSession(): boolean {
   return Boolean(localStorage.getItem('access_token'))
 }
 
-let currentSync: Promise<void> | null = null
 
 async function runSync(): Promise<void> {
   if (!hasSession()) return
@@ -20,21 +34,42 @@ async function runSync(): Promise<void> {
   setStatus({ syncing: true })
 
   try {
-    let hasMore = true
-    let rounds = 0
-    while (hasMore && rounds < MAX_PULL_ROUNDS) {
-      const result = await pullChanges()
-      hasMore = result.hasMore
-      rounds += 1
+    let pullError: unknown = null
+    try {
+      let hasMore = true
+      let rounds = 0
+      while (hasMore && rounds < MAX_PULL_ROUNDS) {
+        const result = await pullChanges()
+        hasMore = result.hasMore
+        rounds += 1
+      }
+    } catch (err) {
+      pullError = err
     }
 
     await pushOutbox()
 
+    if (pullError) {
+      throw pullError
+    }
+
     const pending = await db.outbox.count()
     setStatus({ syncing: false, lastSyncAt: new Date().toISOString(), pending })
+
+    backoffMs = MIN_BACKOFF_MS
   } catch (err) {
     console.error('sincronización falló', err)
     setStatus({ syncing: false })
+
+    if (navigator.onLine) {
+      clearRetryTimer()
+      retryTimerId = window.setTimeout(() => {
+        retryTimerId = null
+        void syncNow()
+      }, backoffMs)
+
+      backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS)
+    }
   }
 }
 
@@ -62,22 +97,28 @@ export function startSync(): () => void {
 
   const handleOnline = () => {
     setStatus({ online: true })
+    clearRetryTimer()
+    backoffMs = MIN_BACKOFF_MS
     void syncNow()
   }
   const handleOffline = () => {
     setStatus({ online: false })
+    clearRetryTimer()
   }
 
   window.addEventListener('online', handleOnline)
   window.addEventListener('offline', handleOffline)
 
-  const intervalId = window.setInterval(() => {
-    void syncNow()
+  intervalId = window.setInterval(() => {
+    if (retryTimerId === null) {
+      void syncNow()
+    }
   }, SYNC_INTERVAL_MS)
 
   return () => {
     window.removeEventListener('online', handleOnline)
     window.removeEventListener('offline', handleOffline)
-    window.clearInterval(intervalId)
+    if (intervalId !== null) window.clearInterval(intervalId)
+    clearRetryTimer()
   }
 }

@@ -28,11 +28,41 @@ export async function enqueue(
   setStatus({ pending: await db.outbox.count() })
 }
 
-export async function pushOutbox(): Promise<{ applied: number; failed: number }> {
-  const entries = await db.outbox.orderBy('createdAt').limit(500).toArray()
-  if (entries.length === 0) return { applied: 0, failed: 0 }
+const MAX_RETRIES = 5
 
-  const ops = entries.map((e) => ({
+export async function pushOutbox(): Promise<{ applied: number; failed: number }> {
+  const allEntries = await db.outbox.orderBy('createdAt').limit(500).toArray()
+  if (allEntries.length === 0) return { applied: 0, failed: 0 }
+
+  const validEntries: OutboxEntry[] = []
+  const exhaustedEntries: OutboxEntry[] = []
+
+  for (const e of allEntries) {
+    if (e.attempts >= MAX_RETRIES) {
+      exhaustedEntries.push(e)
+    } else {
+      validEntries.push(e)
+    }
+  }
+
+  if (exhaustedEntries.length > 0) {
+    await db.transaction('rw', [db.outbox, db.hourLogs], async () => {
+      for (const e of exhaustedEntries) {
+        const rowId = e.payload.id
+        if (typeof rowId === 'number') {
+          await db.hourLogs.update(rowId, { 
+            syncState: 'failed', 
+            reviewNote: e.lastError || 'Máximo de reintentos alcanzado' 
+          })
+        }
+      }
+      await db.outbox.bulkDelete(exhaustedEntries.map((e) => e.id as number))
+    })
+  }
+
+  if (validEntries.length === 0) return { applied: 0, failed: 0 }
+
+  const ops = validEntries.map((e) => ({
     clientOpId: e.clientOpId,
     entity: e.entity,
     op: e.op,
@@ -40,20 +70,30 @@ export async function pushOutbox(): Promise<{ applied: number; failed: number }>
     payload: e.payload,
   }))
 
-  // El outbox es lo único que sabe qué id local le corresponde a cada operación,
-  // así que el mapa se captura en memoria antes de vaciarlo.
-  const localIds = new Map(entries.map((e) => [e.clientOpId, Number(e.payload.id)]))
+  const localIds = new Map(validEntries.map((e) => [e.clientOpId, Number(e.payload.id)]))
 
-  await db.outbox.bulkDelete(entries.map((e) => e.id as number))
+  await db.outbox.bulkDelete(validEntries.map((e) => e.id as number))
 
-  const { results } = await api<{ results: SyncOperationResult[] }>('/sync/push', {
-    method: 'POST',
-    body: JSON.stringify({ ops }),
-  })
+  try {
+    const { results } = await api<{ results: SyncOperationResult[] }>('/sync/push', {
+      method: 'POST',
+      body: JSON.stringify({ ops }),
+    })
 
-  await applyResults(results, localIds)
-  return {
-    applied: results.filter((r) => r.status === 'applied').length,
-    failed: results.filter((r) => r.status !== 'applied').length,
+    await applyResults(results, localIds)
+    return {
+      applied: results.filter((r) => r.status === 'applied').length,
+      failed: results.filter((r) => r.status !== 'applied').length,
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const retryEntries = validEntries.map(e => ({
+      ...e,
+      attempts: (e.attempts || 0) + 1,
+      lastError: errorMessage
+    }))
+
+    await db.outbox.bulkPut(retryEntries)
+    throw error
   }
 }
