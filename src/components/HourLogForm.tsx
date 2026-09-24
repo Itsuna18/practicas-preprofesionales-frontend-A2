@@ -164,6 +164,25 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
 
     setSubmitting(true)
 
+    const trimmedActivity = activity.trim()
+
+    const existingDuplicate = await db.hourLogs
+      .where('placementId')
+      .equals(placementId)
+      .filter((log) =>
+        log.date === date &&
+        log.startTime === startTime &&
+        log.endTime === endTime &&
+        log.activity.trim().toLowerCase() === trimmedActivity.toLowerCase()
+      )
+      .first()
+
+    if (existingDuplicate) {
+      setSubmitError('Ya existe un registro de horas con la misma fecha, horario y actividad.')
+      setSubmitting(false)
+      return
+    }
+
     // Id local temporal: negativo para no chocar jamás con un id real del
     // servidor (que siempre es positivo). Cuando el servidor confirme el
     // registro, applyResults lo reemplaza; hasta entonces vive solo aquí,
@@ -171,7 +190,6 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
     const localId = -Date.now()
     const nowIso = new Date().toISOString()
     const hoursValue = Number(hours)
-    const trimmedActivity = activity.trim()
 
     const row: LocalHourLog = {
       id: localId,
