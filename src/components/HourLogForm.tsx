@@ -164,21 +164,26 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
 
     setSubmitting(true)
 
-    const trimmedActivity = activity.trim()
+    const normInputDate = date.slice(0, 10)
+    const normInputActivity = activity.toLowerCase().replace(/\s+/g, '')
 
     const existingDuplicate = await db.hourLogs
       .where('placementId')
       .equals(placementId)
-      .filter((log) =>
-        log.date === date &&
-        log.startTime === startTime &&
-        log.endTime === endTime &&
-        log.activity.trim().toLowerCase() === trimmedActivity.toLowerCase()
-      )
+      .filter((log) => {
+        const logDate = String(log.date || '').slice(0, 10)
+        const logActivity = String(log.activity || '').toLowerCase().replace(/\s+/g, '')
+        const sameDay = logDate === normInputDate
+        const sameTime = log.startTime === startTime && log.endTime === endTime
+        const sameActivity = logActivity === normInputActivity
+
+        // Rechaza si es el mismo día y mismo horario, o si es la misma actividad en horario coincidente
+        return sameDay && (sameTime || sameActivity)
+      })
       .first()
 
     if (existingDuplicate) {
-      setSubmitError('Ya existe un registro de horas con la misma fecha, horario y actividad.')
+      setSubmitError('Ya existe un registro de horas en esa misma fecha con el mismo horario o actividad.')
       setSubmitting(false)
       return
     }
