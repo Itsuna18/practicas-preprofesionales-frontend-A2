@@ -38,7 +38,7 @@ export async function applyResults(
 
     const targetId = localId ?? result.server?.id
     if (targetId != null) {
-      const serverUpdates = result.server ? { ...result.server } : {}
+      const serverUpdates: Partial<LocalHourLog> = result.server ? { ...result.server } : {}
       delete (serverUpdates as { id?: number }).id
       delete (serverUpdates as { placement?: unknown }).placement
       if (typeof serverUpdates.date === 'string' && serverUpdates.date.includes('T')) {
