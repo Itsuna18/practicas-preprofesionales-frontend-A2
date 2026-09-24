@@ -38,7 +38,13 @@ export async function applyResults(
 
     const targetId = localId ?? result.server?.id
     if (targetId != null) {
-      await db.hourLogs.update(targetId, { syncState: 'failed', reviewNote: result.reason })
+      const serverUpdates = result.server ? { ...result.server } : {}
+      delete (serverUpdates as { id?: number }).id
+      await db.hourLogs.update(targetId, {
+        ...serverUpdates,
+        syncState: 'failed',
+        reviewNote: result.reason ?? result.server?.reviewNote ?? null,
+      })
     }
   }
 }

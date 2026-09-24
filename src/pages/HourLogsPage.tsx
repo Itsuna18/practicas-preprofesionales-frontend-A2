@@ -68,7 +68,14 @@ function HourLogsList({ logs }: { logs: LocalHourLog[] }) {
               {log.startTime}–{log.endTime}
             </span>
             <span className="font-data text-14 text-ink sm:w-14">{log.hours}</span>
-            <span className="flex-1 text-14 text-inkBody">{log.activity}</span>
+            <div className="flex flex-1 flex-col">
+              <span className="text-14 text-inkBody">{log.activity}</span>
+              {log.syncState === 'failed' && log.reviewNote ? (
+                <span className="text-12 font-medium text-void">
+                  Edición rechazada: {log.reviewNote}
+                </span>
+              ) : null}
+            </div>
             <span className="sm:w-32 sm:text-right">
               <StatusBadge status={log.status} />
             </span>
