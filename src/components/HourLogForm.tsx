@@ -178,8 +178,8 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
         const sameTime = log.startTime === startTime && log.endTime === endTime
         const sameActivity = logActivity === normInputActivity
 
-        // Rechaza si es el mismo día y mismo horario, o si es la misma actividad en horario coincidente
-        return sameDay && (sameTime || sameActivity)
+        // Es un duplicado si en la misma fecha coincide el mismo horario y la misma actividad
+        return sameDay && sameTime && sameActivity
       })
       .first()
 
