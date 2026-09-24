@@ -96,4 +96,45 @@ describe('applyResults', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ id: 42, syncState: 'synced' })
   })
+
+  it('updates local row to server real status and rejection reason when tutor already approved', async () => {
+    await db.hourLogs.put({
+      id: 10,
+      placementId: 1,
+      date: '2026-04-01',
+      startTime: '08:00',
+      endTime: '12:00',
+      hours: 4,
+      activity: 'Edición local offline',
+      status: 'SUBMITTED',
+      version: 1,
+      updatedAt: '2026-04-01T00:00:00.000Z',
+      syncState: 'queued',
+    })
+
+    await applyResults(
+      [
+        {
+          clientOpId: 'e1-04-op',
+          status: 'rejected',
+          server: {
+            id: 10,
+            status: 'APPROVED',
+            version: 2,
+            activity: 'Actividad original',
+          },
+          reason: 'La hora ya fue aprobada por el tutor y no puede ser modificada',
+        },
+      ],
+      new Map([['e1-04-op', 10]]),
+    )
+
+    const updated = await db.hourLogs.get(10)
+    expect(updated).toMatchObject({
+      id: 10,
+      status: 'APPROVED',
+      syncState: 'failed',
+      reviewNote: 'La hora ya fue aprobada por el tutor y no puede ser modificada',
+    })
+  })
 })

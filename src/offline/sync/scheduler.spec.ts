@@ -3,7 +3,8 @@ import { db } from '@/offline/db'
 import { pullChanges } from './pull'
 import { pushOutbox } from './push'
 import { startSync, syncNow } from './scheduler'
-import { getStatus } from './status'
+import { getStatus, setStatus, subscribe } from './status'
+
 
 vi.mock('./pull', () => ({ pullChanges: vi.fn() }))
 vi.mock('./push', () => ({ pushOutbox: vi.fn() }))
@@ -17,6 +18,7 @@ beforeEach(async () => {
   localStorage.clear()
   mockedPull.mockReset()
   mockedPush.mockReset()
+  setStatus({ syncing: false, pending: 0 })
 })
 
 describe('syncNow', () => {
@@ -58,6 +60,62 @@ describe('syncNow', () => {
     await expect(syncNow()).resolves.toBeUndefined()
     expect(getStatus().syncing).toBe(false)
   })
+
+  it('nunca notifica syncing:false con un pending desactualizado', async () => {
+    localStorage.setItem('access_token', 'tok')
+    mockedPull.mockResolvedValue({ applied: 0, hasMore: false })
+    mockedPush.mockResolvedValue({ applied: 0, failed: 0 })
+
+    // Dos operaciones que se quedan en el outbox real durante toda la corrida.
+    await db.outbox.bulkAdd([
+      {
+        clientOpId: 'a',
+        entity: 'hourLog',
+        op: 'create',
+        payload: {},
+        baseVersion: null,
+        createdAt: new Date().toISOString(),
+        attempts: 0,
+        lastError: null,
+      },
+      {
+        clientOpId: 'b',
+        entity: 'hourLog',
+        op: 'create',
+        payload: {},
+        baseVersion: null,
+        createdAt: new Date().toISOString(),
+        attempts: 0,
+        lastError: null,
+      },
+    ])
+
+    const snapshots: { syncing: boolean; pending: number }[] = []
+    const unsubscribe = subscribe(() => {
+      const { syncing, pending } = getStatus()
+      snapshots.push({ syncing, pending })
+    })
+
+    await syncNow()
+    unsubscribe()
+
+    const realPending = await db.outbox.count()
+    const estadoInconsistente = snapshots.find(
+      (s) => s.syncing === false && s.pending !== realPending,
+    )
+    expect(estadoInconsistente).toBeUndefined()
+  })
+
+  it('no arranca una sincronización si el estado ya dice que otra pestaña está sincronizando', async () => {
+    localStorage.setItem('access_token', 'tok')
+    setStatus({ syncing: true })
+
+    await syncNow()
+
+    expect(mockedPull).not.toHaveBeenCalled()
+    expect(mockedPush).not.toHaveBeenCalled()
+  })
+
 })
 
 describe('startSync', () => {

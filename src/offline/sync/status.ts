@@ -16,13 +16,27 @@ let state: SyncStatus = {
 
 const listeners = new Set<Listener>()
 
+// Coordina el estado entre pestañas del mismo origen. Cada setStatus() local
+// se transmite a las demás pestañas, que lo aplican sin retransmitirlo, para
+// no entrar en un eco infinito.
+const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('sync-status') : null
+
+channel?.addEventListener('message', (event: MessageEvent<Partial<SyncStatus>>) => {
+  applyPatch(event.data)
+})
+
+function applyPatch(patch: Partial<SyncStatus>): void {
+  state = { ...state, ...patch }
+  for (const listener of listeners) listener()
+}
+
 export function getStatus(): SyncStatus {
   return state
 }
 
 export function setStatus(patch: Partial<SyncStatus>): void {
-  state = { ...state, ...patch }
-  for (const listener of listeners) listener()
+  applyPatch(patch)
+  channel?.postMessage(patch)
 }
 
 export function subscribe(listener: Listener): () => void {
