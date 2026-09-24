@@ -165,7 +165,8 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
     setSubmitting(true)
 
     const normInputDate = date.slice(0, 10)
-    const normInputActivity = activity.toLowerCase().replace(/\s+/g, '')
+    const trimmedActivity = activity.trim()
+    const normInputActivity = trimmedActivity.toLowerCase().replace(/\s+/g, '')
 
     const existingDuplicate = await db.hourLogs
       .where('placementId')
