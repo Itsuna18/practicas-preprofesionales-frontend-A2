@@ -132,4 +132,41 @@ describe('AuthProvider', () => {
     expect(await db.placements.count()).toBe(0)
     expect(await db.meta.count()).toBe(0)
   })
+
+  it('cierra sesión y limpia el contexto cuando otra pestaña remueve la sesión en storage', async () => {
+    localStorage.setItem(
+      'user',
+      JSON.stringify({ id: 1, email: 'user@miyura.com', fullName: 'Usuario 1', role: 'STUDENT', companyId: null }),
+    )
+    localStorage.setItem('access_token', 'valid-token')
+
+    const { result } = renderHook(() => useAuth(), { wrapper: withProvider })
+    expect(result.current.user?.email).toBe('user@miyura.com')
+
+    // Simula logout en otra pestaña
+    await act(async () => {
+      localStorage.removeItem('user')
+      localStorage.removeItem('access_token')
+      window.dispatchEvent(new StorageEvent('storage', { key: 'user' }))
+    })
+
+    expect(result.current.user).toBeNull()
+  })
+
+  it('limpia el contexto de usuario al recibir el evento auth:expired', async () => {
+    localStorage.setItem(
+      'user',
+      JSON.stringify({ id: 1, email: 'user@miyura.com', fullName: 'Usuario 1', role: 'STUDENT', companyId: null }),
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper: withProvider })
+    expect(result.current.user?.email).toBe('user@miyura.com')
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('auth:expired'))
+    })
+
+    expect(result.current.user).toBeNull()
+  })
 })
+
