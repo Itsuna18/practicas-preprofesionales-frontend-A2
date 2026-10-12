@@ -11,8 +11,18 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const msg = sessionStorage.getItem('session_expired_message')
+      if (msg) {
+        sessionStorage.removeItem('session_expired_message')
+        return msg
+      }
+    }
+    return null
+  })
   const [submitting, setSubmitting] = useState(false)
+
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import { db } from '@/offline/db'
@@ -65,6 +65,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     navigate('/login')
   }
+
+  // Sincronización entre pestañas y caducidad de sesión
+  useEffect(() => {
+    function handleStorage(e: StorageEvent) {
+      if (e.key === 'access_token' || e.key === 'user') {
+        const storedUser = readStoredUser()
+        setUser(storedUser)
+        if (!storedUser) {
+          db.delete().then(() => db.open()).catch(() => {})
+          navigate('/login')
+        }
+      }
+    }
+
+    function handleExpired() {
+      db.delete().then(() => db.open()).catch(() => {})
+      setUser(null)
+      navigate('/login')
+    }
+
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('auth:expired', handleExpired)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('auth:expired', handleExpired)
+    }
+  }, [navigate])
 
   return (
     <AuthContext.Provider value={{ user, role: user?.role ?? null, login, logout }}>
