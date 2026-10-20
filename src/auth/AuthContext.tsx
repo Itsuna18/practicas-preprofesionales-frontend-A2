@@ -69,12 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sincronización entre pestañas y caducidad de sesión
   useEffect(() => {
     function handleStorage(e: StorageEvent) {
-      if (e.key === 'access_token' || e.key === 'user') {
+      if (e.key === 'access_token' || e.key === 'user' || e.key === null) {
         const storedUser = readStoredUser()
-        setUser(storedUser)
-        if (!storedUser) {
+        const storedToken = localStorage.getItem('access_token')
+        if (!storedUser || !storedToken) {
+          setUser(null)
           db.delete().then(() => db.open()).catch(() => {})
           navigate('/login')
+        } else {
+          setUser(storedUser)
         }
       }
     }

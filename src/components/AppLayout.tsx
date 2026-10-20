@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, type Role } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { SyncIndicator } from '@/components/SyncIndicator'
@@ -56,6 +56,16 @@ function initialsOf(fullName: string | undefined): string {
 
 export function AppLayout() {
   const { user, role, logout } = useAuth()
+  const location = useLocation()
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
+
+  useEffect(() => {
+    if (!user || !role || !token || !storedUser) {
+      logout()
+    }
+  }, [location.pathname, user, role, token, storedUser, logout])
 
   // Se llama una sola vez para toda la sesión autenticada: AppLayout envuelve
   // todas las rutas protegidas vía <Outlet />, así que no se remonta al
@@ -63,6 +73,10 @@ export function AppLayout() {
   useEffect(() => {
     return startSync()
   }, [])
+
+  if (!user || !role || !token || !storedUser) {
+    return <Navigate to="/login" replace />
+  }
 
   const navGroups = role ? NAV_BY_ROLE[role] : []
 
@@ -111,6 +125,14 @@ export function AppLayout() {
                     <NavLink
                       key={item.path}
                       to={item.path}
+                      onClick={(e) => {
+                        const currentToken = localStorage.getItem('access_token')
+                        const currentUser = localStorage.getItem('user')
+                        if (!currentToken || !currentUser || !user) {
+                          e.preventDefault()
+                          logout()
+                        }
+                      }}
                       className={({ isActive }) =>
                         cn(
                           'flex h-9 items-center rounded-md px-3 text-14 transition-colors',
