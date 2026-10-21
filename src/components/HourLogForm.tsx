@@ -1,11 +1,10 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { db, type LocalHourLog } from '@/offline/db'
-import { enqueue } from '@/offline/sync/push'
 import { useHourLogForm } from './useHourLogForm'
+import { useSubmitHourLog } from './useSubmitHourLog'
 
 interface HourLogFormProps {
   placementId: number
@@ -14,92 +13,20 @@ interface HourLogFormProps {
 
 export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
   const form = useHourLogForm()
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const { submitting, submitError, submit } = useSubmitHourLog(placementId)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setSubmitError(null)
 
     const nextErrors = form.validate()
     if (Object.keys(nextErrors).length > 0) {
       return
     }
 
-    setSubmitting(true)
-
-    const { date, startTime, endTime, hours, activity } = form.values
-    const normInputDate = date.slice(0, 10)
-    const trimmedActivity = activity.trim()
-    const normInputActivity = trimmedActivity.toLowerCase().replace(/\s+/g, '')
-
-    const existingDuplicate = await db.hourLogs
-      .where('placementId')
-      .equals(placementId)
-      .filter((log) => {
-        const logDate = String(log.date || '').slice(0, 10)
-        const logActivity = String(log.activity || '').toLowerCase().replace(/\s+/g, '')
-        const sameDay = logDate === normInputDate
-        const sameTime = log.startTime === startTime && log.endTime === endTime
-        const sameActivity = logActivity === normInputActivity
-        return sameDay && sameTime && sameActivity
-      })
-      .first()
-
-    if (existingDuplicate) {
-      setSubmitError('Ya existe un registro de horas en esa misma fecha con el mismo horario o actividad.')
-      setSubmitting(false)
-      return
-    }
-
-    const localId = -Date.now()
-    const nowIso = new Date().toISOString()
-    const hoursValue = Number(hours)
-
-    const row: LocalHourLog = {
-      id: localId,
-      placementId,
-      date,
-      startTime,
-      endTime,
-      hours: hoursValue,
-      activity: trimmedActivity,
-      status: 'SUBMITTED',
-      reviewNote: null,
-      version: 1,
-      updatedAt: nowIso,
-      syncState: 'local',
-    }
-
-    try {
-      await db.transaction('rw', [db.hourLogs, db.outbox], async () => {
-        await db.hourLogs.add(row)
-        await enqueue({
-          entity: 'hourLog',
-          op: 'create',
-          payload: {
-            id: row.id,
-            placementId: row.placementId,
-            date: row.date,
-            startTime: row.startTime,
-            endTime: row.endTime,
-            hours: row.hours,
-            activity: row.activity,
-            status: row.status,
-            reviewNote: row.reviewNote,
-            version: row.version,
-            updatedAt: row.updatedAt,
-          },
-          baseVersion: null,
-        })
-      })
-
+    const result = await submit(form.values)
+    if (result.success) {
       form.reset()
       onSaved?.()
-    } catch {
-      setSubmitError('No se pudo guardar el registro en este dispositivo. Intenta de nuevo.')
-    } finally {
-      setSubmitting(false)
     }
   }
 
