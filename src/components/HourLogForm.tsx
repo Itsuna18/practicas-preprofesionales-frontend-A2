@@ -11,18 +11,25 @@ interface HourLogFormProps {
   onSaved?: () => void
 }
 
+// Pequeño helper visual: evita repetir el mismo <p role="alert"> cinco veces
+// y mantiene la complejidad del componente principal baja.
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null
+  return (
+    <p id={id} role="alert" className="text-12 text-void">
+      {message}
+    </p>
+  )
+}
+
 export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
   const form = useHourLogForm()
   const { submitting, submitError, submit } = useSubmitHourLog(placementId)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
     const nextErrors = form.validate()
-    if (Object.keys(nextErrors).length > 0) {
-      return
-    }
-
+    if (Object.keys(nextErrors).length > 0) return
     const result = await submit(form.values)
     if (result.success) {
       form.reset()
@@ -48,13 +55,8 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
         {confirmationLabel ? (
           <p className="font-data text-12 text-inkSoft">{confirmationLabel}</p>
         ) : null}
-        {errors.date ? (
-          <p id="hourlog-date-error" role="alert" className="text-12 text-void">
-            {errors.date}
-          </p>
-        ) : null}
+        <FieldError id="hourlog-date-error" message={errors.date} />
       </div>
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="hourlog-start">Hora de inicio</Label>
@@ -67,13 +69,8 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
             aria-describedby={errors.startTime ? 'hourlog-start-error' : undefined}
             className="font-data"
           />
-          {errors.startTime ? (
-            <p id="hourlog-start-error" role="alert" className="text-12 text-void">
-              {errors.startTime}
-            </p>
-          ) : null}
+          <FieldError id="hourlog-start-error" message={errors.startTime} />
         </div>
-
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="hourlog-end">Hora de fin</Label>
           <Input
@@ -85,18 +82,12 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
             aria-describedby={errors.endTime ? 'hourlog-end-error' : undefined}
             className="font-data"
           />
-          {errors.endTime ? (
-            <p id="hourlog-end-error" role="alert" className="text-12 text-void">
-              {errors.endTime}
-            </p>
-          ) : null}
+          <FieldError id="hourlog-end-error" message={errors.endTime} />
         </div>
       </div>
-
       {durationLabel ? (
         <p className="-mt-2 font-data text-12 text-inkSoft">{durationLabel}</p>
       ) : null}
-
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="hourlog-hours">Horas</Label>
         <Input
@@ -113,13 +104,8 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
         {liveHoursWarning && !errors.hours ? (
           <p className="text-12 text-pending">{liveHoursWarning}</p>
         ) : null}
-        {errors.hours ? (
-          <p id="hourlog-hours-error" role="alert" className="text-12 text-void">
-            {errors.hours}
-          </p>
-        ) : null}
+        <FieldError id="hourlog-hours-error" message={errors.hours} />
       </div>
-
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="hourlog-activity">Actividad</Label>
         <Textarea
@@ -131,23 +117,14 @@ export function HourLogForm({ placementId, onSaved }: HourLogFormProps) {
           rows={3}
           placeholder="Qué hiciste durante este bloque de horas"
         />
-        {errors.activity ? (
-          <p id="hourlog-activity-error" role="alert" className="text-12 text-void">
-            {errors.activity}
-          </p>
-        ) : null}
+        <FieldError id="hourlog-activity-error" message={errors.activity} />
       </div>
-
       {submitError ? (
-        <p role="alert" className="text-14 text-void">
-          {submitError}
-        </p>
+        <p role="alert" className="text-14 text-void">{submitError}</p>
       ) : null}
-
       <p className="text-12 text-inkSoft">
         Se guarda en este dispositivo aunque no tengas conexión. Se sincroniza solo cuando vuelvas a estar en línea
       </p>
-
       <Button type="submit" disabled={submitting}>
         {submitting ? 'Guardando…' : 'Guardar horas'}
       </Button>
