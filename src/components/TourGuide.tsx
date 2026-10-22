@@ -1,4 +1,5 @@
 import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { HelpCircle } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -182,7 +183,11 @@ export function TourGuide() {
       >
         <HelpCircle aria-hidden="true" className="size-[18px]" />
       </button>
-      {open ? <TourOverlay steps={TOUR_STEPS[role]} onFinish={finish} /> : null}
+      {/* Al <body> con un portal: la cabecera tiene backdrop-filter, que vuelve a
+          la cabecera el marco de los elementos `fixed` de adentro; sin el portal,
+          la tarjeta de los pasos de abajo (Sincronización) quedaba fuera de la
+          pantalla y el tour se trababa. */}
+      {open ? createPortal(<TourOverlay steps={TOUR_STEPS[role]} onFinish={finish} />, document.body) : null}
     </>
   )
 }
