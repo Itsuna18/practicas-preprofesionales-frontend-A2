@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, type Role } from '@/auth/AuthContext'
+import { AssistantChat } from '@/components/AssistantChat'
 import { Button } from '@/components/ui/button'
 import { SyncIndicator } from '@/components/SyncIndicator'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -145,6 +146,8 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+
+      <AssistantChat />
     </div>
   )
 }
