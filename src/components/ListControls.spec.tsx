@@ -127,3 +127,40 @@ describe('ListToolbar + Pagination + useListing', () => {
     expect(screen.getByText('21–25 de 25 ofertas')).toBeInTheDocument()
   })
 })
+
+describe('search field: special characters', () => {
+  it('blocks special characters while typing and explains why', async () => {
+    renderDemo()
+    const box = screen.getByRole('searchbox', { name: 'Buscar oferta' })
+    await userEvent.type(box, 'oferta<1>')
+    expect(box).toHaveValue('oferta1')
+    expect(box).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('Solo letras, números, espacios y . @ # - _')).toBeInTheDocument()
+  })
+
+  it('accepts accents, ñ, numbers and the allowed symbols without warning', async () => {
+    renderDemo()
+    const box = screen.getByRole('searchbox', { name: 'Buscar oferta' })
+    await userEvent.type(box, 'Núñez #1 e@mail.com a-b_c')
+    expect(box).toHaveValue('Núñez #1 e@mail.com a-b_c')
+    expect(box).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('cleans pasted text too', async () => {
+    renderDemo()
+    const box = screen.getByRole('searchbox', { name: 'Buscar oferta' })
+    box.focus()
+    await userEvent.paste('<script>oferta 2</script>')
+    expect(box).toHaveValue('scriptoferta 2script')
+  })
+
+  it('cleans a search that arrives in a hand-made URL', () => {
+    renderDemo('/?q=' + encodeURIComponent('<img src=x>oferta'))
+    expect(screen.getByRole('searchbox')).toHaveValue('img srcxoferta')
+  })
+
+  it('limits the length', () => {
+    renderDemo()
+    expect(screen.getByRole('searchbox')).toHaveAttribute('maxLength', '60')
+  })
+})

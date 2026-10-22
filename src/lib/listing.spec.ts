@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesQuery, normalizeText, pageWindow, paginate } from './listing'
+import { SEARCH_MAX_LENGTH, hasForbiddenChars, matchesQuery, normalizeText, pageWindow, paginate, sanitizeSearch } from './listing'
 
 describe('normalizeText', () => {
   it('ignores case and accents', () => {
@@ -54,5 +54,29 @@ describe('pageWindow', () => {
 
   it('does not put an ellipsis between consecutive pages', () => {
     expect(pageWindow(3, 10)).toEqual([1, 2, 3, 4, '…', 10])
+  })
+})
+
+describe('sanitizeSearch', () => {
+  it('keeps letters with accents, numbers, spaces and . @ # - _', () => {
+    expect(sanitizeSearch('Lucía Núñez #101 e1@miyura.com pre-práctica_2')).toBe('Lucía Núñez #101 e1@miyura.com pre-práctica_2')
+  })
+
+  it('removes special characters', () => {
+    expect(sanitizeSearch('<script>alert("x")</script>')).toBe('scriptalertxscript')
+    expect(sanitizeSearch("datos'; DROP TABLE--")).toBe('datos DROP TABLE--')
+    expect(sanitizeSearch('100% $ * { } [ ] \\ / | ~ ^ ` = + ? ! ¿ ¡ & ( ) : , ;')).toBe('100 ')
+  })
+
+  it('collapses repeated spaces, trims the start and limits the length', () => {
+    expect(sanitizeSearch('   ana    perez')).toBe('ana perez')
+    expect(sanitizeSearch('a'.repeat(100))).toHaveLength(SEARCH_MAX_LENGTH)
+  })
+})
+
+describe('hasForbiddenChars', () => {
+  it('detects only the characters that would be removed', () => {
+    expect(hasForbiddenChars('Estudiante #101')).toBe(false)
+    expect(hasForbiddenChars('ana<b>')).toBe(true)
   })
 })

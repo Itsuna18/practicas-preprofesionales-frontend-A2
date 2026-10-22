@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { matchesQuery, paginate } from '@/lib/listing'
+import { matchesQuery, paginate, sanitizeSearch } from '@/lib/listing'
 
 export interface ListingConfig<T> {
   /** Texto en el que busca la caja de búsqueda (nombre, título, actividad…). */
@@ -38,7 +38,8 @@ export interface Listing<T> {
 function readParams(params: URLSearchParams, filterNames: string[], defaultSize: number) {
   const sizeParam = Number(params.get('tamano'))
   return {
-    query: params.get('q') ?? '',
+    // También se limpia lo que llega por la URL, por si el enlace se armó a mano.
+    query: sanitizeSearch(params.get('q') ?? ''),
     page: Number(params.get('pagina') ?? '1'),
     pageSize: PAGE_SIZES.includes(sizeParam) ? sizeParam : defaultSize,
     activeFilters: filterNames.map((name) => [name, params.get(name) ?? ''] as const).filter(([, v]) => v),
