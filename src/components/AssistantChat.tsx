@@ -232,6 +232,7 @@ export function AssistantChat() {
     <>
       <button
         type="button"
+        data-tour="assistant"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="assistant-chat"
