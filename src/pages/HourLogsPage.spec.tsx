@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as hoursModule from '@/lib/hours'
@@ -34,15 +35,15 @@ beforeEach(() => {
 
 describe('HourLogsPage', () => {
   it('shows the totals and every log', () => {
-    render(<HourLogsPage />)
-    expect(screen.getByText('2 registros')).toBeInTheDocument()
+    render(<HourLogsPage />, { wrapper: MemoryRouter })
+    expect(screen.getByText('1–2 de 2 registros')).toBeInTheDocument()
     expect(screen.getByText('Actividad 1')).toBeInTheDocument()
     expect(screen.getByText('Actividad 2')).toBeInTheDocument()
     expect(screen.getByText(/4\.0 sin aprobar/)).toBeInTheDocument()
   })
 
   it('does not recompute the totals when it re-renders with the same logs', () => {
-    const { rerender } = render(<HourLogsPage />)
+    const { rerender } = render(<HourLogsPage />, { wrapper: MemoryRouter })
     const calls = summarizeHours.mock.calls.length
 
     rerender(<HourLogsPage />)
@@ -52,19 +53,19 @@ describe('HourLogsPage', () => {
   })
 
   it('recomputes the totals when the logs change', () => {
-    const { rerender } = render(<HourLogsPage />)
+    const { rerender } = render(<HourLogsPage />, { wrapper: MemoryRouter })
     const calls = summarizeHours.mock.calls.length
 
     logs = [...(logs ?? []), hourLog(3)]
     rerender(<HourLogsPage />)
 
     expect(summarizeHours.mock.calls.length).toBe(calls + 1)
-    expect(screen.getByText('3 registros')).toBeInTheDocument()
+    expect(screen.getByText('1–3 de 3 registros')).toBeInTheDocument()
   })
 
   it('shows the loading and empty states', () => {
     placement = undefined
-    const { rerender } = render(<HourLogsPage />)
+    const { rerender } = render(<HourLogsPage />, { wrapper: MemoryRouter })
     expect(screen.getByText('Cargando tu práctica…')).toBeInTheDocument()
 
     placement = null

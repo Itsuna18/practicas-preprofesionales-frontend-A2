@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { type Application, listMine } from '@/api/applications'
 import { ApiError } from '@/api/client'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { PageHeader } from '@/components/PageHeader'
 import {
   EmptyState,
@@ -15,6 +16,15 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Ledger } from '@/components/ledger/Ledger'
 import { parseLocalDate } from '@/lib/date'
+import { useListing } from '@/lib/useListing'
+
+const STATUS_OPTIONS = [
+  { value: 'SUBMITTED', label: 'Enviada' },
+  { value: 'INTERVIEW', label: 'Entrevista' },
+  { value: 'ACCEPTED', label: 'Aceptada' },
+  { value: 'REJECTED', label: 'Rechazada' },
+  { value: 'WITHDRAWN', label: 'Retirada' },
+]
 
 function formatDate(dateValue: string): string {
   const parsed = parseLocalDate(dateValue)
@@ -30,6 +40,23 @@ function ColumnHeader() {
       <span className="w-32">Enviada</span>
       <span className="w-32 text-right">Estado</span>
     </TableHeaderRow>
+  )
+}
+
+function ApplicationRows({ applications }: { applications: Application[] }) {
+  return (
+    <Ledger header={<ColumnHeader />}>
+      {applications.map((application) => (
+        <Link key={application.id} to={`/ofertas/${application.offerId}`} className={rowClass}>
+          <span className="text-14 text-inkBody sm:w-40">{application.offer.company.name}</span>
+          <span className="flex-1 text-14 font-semibold text-ink">{application.offer.title}</span>
+          <span className="font-data text-13 text-inkSoft sm:w-32">{formatDate(application.submittedAt)}</span>
+          <span className="sm:w-32 sm:text-right">
+            <StatusBadge status={application.status} />
+          </span>
+        </Link>
+      ))}
+    </Ledger>
   )
 }
 
@@ -51,29 +78,17 @@ export function MyApplicationsPage() {
     }
   }, [])
 
-  return (
-    <>
-      <PageHeader
-        title="Mis postulaciones"
-        subtitle="El estado de cada oferta a la que aplicaste, según respondan las empresas."
-      />
+  const listing = useListing(applications, {
+    searchText: (a) => `${a.offer.title} ${a.offer.company.name}`,
+    filters: { estado: (a, value) => a.status === value },
+  })
 
-      <Panel
-        toolbar={
-          applications && applications.length > 0 ? (
-            <span className="ml-auto font-data text-12 text-inkSoft">
-              {applications.length === 1
-                ? '1 postulación'
-                : `${applications.length} postulaciones`}
-            </span>
-          ) : undefined
-        }
-      >
-        {error ? (
-          <ErrorState>{error}</ErrorState>
-        ) : applications === undefined ? (
-          <LoadingState>Cargando postulaciones…</LoadingState>
-        ) : applications.length === 0 ? (
+  function body() {
+    if (error) return <ErrorState>{error}</ErrorState>
+    if (!listing.pageItems) return <LoadingState>Cargando postulaciones…</LoadingState>
+    if (listing.pageItems.length === 0) {
+      return (
+        <ListEmpty listing={listing}>
           <EmptyState
             title="Todavía no has postulado a ninguna oferta"
             description="Mirá las ofertas abiertas y postulá a la que te sirva."
@@ -83,26 +98,30 @@ export function MyApplicationsPage() {
               </Button>
             }
           />
-        ) : (
-          <Ledger header={<ColumnHeader />}>
-            {applications.map((application) => (
-              <Link key={application.id} to={`/ofertas/${application.offerId}`} className={rowClass}>
-                <span className="text-14 text-inkBody sm:w-40">
-                  {application.offer.company.name}
-                </span>
-                <span className="flex-1 text-14 font-semibold text-ink">
-                  {application.offer.title}
-                </span>
-                <span className="font-data text-13 text-inkSoft sm:w-32">
-                  {formatDate(application.submittedAt)}
-                </span>
-                <span className="sm:w-32 sm:text-right">
-                  <StatusBadge status={application.status} />
-                </span>
-              </Link>
-            ))}
-          </Ledger>
-        )}
+        </ListEmpty>
+      )
+    }
+    return <ApplicationRows applications={listing.pageItems} />
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Mis postulaciones"
+        subtitle="El estado de cada oferta a la que aplicaste, según respondan las empresas."
+      />
+
+      {applications && applications.length > 0 ? (
+        <ListToolbar
+          listing={listing}
+          searchPlaceholder="Buscar por oferta o empresa"
+          filters={[{ name: 'estado', label: 'Estado', options: STATUS_OPTIONS }]}
+        />
+      ) : null}
+
+      <Panel>
+        {body()}
+        <Pagination listing={listing} noun={['postulación', 'postulaciones']} />
       </Panel>
     </>
   )

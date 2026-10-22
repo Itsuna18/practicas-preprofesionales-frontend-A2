@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import { EmptyState } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Ledger, LedgerHeaderRow } from '@/components/ledger/Ledger'
@@ -77,9 +77,8 @@ function LedgerColumnHeader() {
   )
 }
 
-/** Libro de horas: los registros más recientes primero. */
+/** Libro de horas en el orden recibido: la página decide el orden y la paginación. */
 export function HourLogsList({ logs }: { logs: LocalHourLog[] }) {
-  const newestFirst = useMemo(() => logs.slice().reverse(), [logs])
 
   if (logs.length === 0) {
     return (
@@ -92,7 +91,7 @@ export function HourLogsList({ logs }: { logs: LocalHourLog[] }) {
 
   return (
     <Ledger header={<LedgerColumnHeader />}>
-      {newestFirst.map((log) => (
+      {logs.map((log) => (
         <HourLogRow key={log.id} log={log} />
       ))}
     </Ledger>
