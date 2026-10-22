@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { HourLogForm } from '@/components/HourLogForm'
-import { HourLogsList } from '@/components/HourLogsList'
+import { HourLogsBrowser } from '@/components/HourLogsBrowser'
 import { HoursProgressPanel } from '@/components/HoursProgressPanel'
 import { PageHeader } from '@/components/PageHeader'
-import { EmptyState, LoadingState, Panel } from '@/components/Panel'
+import { EmptyState, LoadingState } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,7 +15,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { type HoursSummary, summarizeHours } from '@/lib/hours'
-import { plural } from '@/lib/utils'
 import { useHourLogs } from '@/offline/hooks/useHourLogs'
 import { usePlacement } from '@/offline/hooks/usePlacement'
 
@@ -82,15 +81,7 @@ export function HourLogsPage() {
 
       <HoursProgressPanel hours={hours} note={submittedNote(hours)} />
 
-      <Panel
-        toolbar={
-          <span className="ml-auto font-data text-12 text-inkSoft">
-            {plural(logs.length, 'registro', 'registros')}
-          </span>
-        }
-      >
-        <HourLogsList logs={logs} />
-      </Panel>
+      <HourLogsBrowser logs={logs} />
     </>
   )
 }

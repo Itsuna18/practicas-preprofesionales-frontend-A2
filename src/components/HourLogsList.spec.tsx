@@ -28,12 +28,12 @@ describe('HourLogsList', () => {
     expect(screen.getByText('Todavía no has registrado horas')).toBeInTheDocument()
   })
 
-  it('lists the newest log first', () => {
+  it('keeps the order it receives', () => {
     render(
       <HourLogsList
         logs={[
-          hourLog({ id: 1, date: '2026-04-01', activity: 'Primera' }),
           hourLog({ id: 2, date: '2026-04-02', activity: 'Segunda' }),
+          hourLog({ id: 1, date: '2026-04-01', activity: 'Primera' }),
         ]}
       />,
     )

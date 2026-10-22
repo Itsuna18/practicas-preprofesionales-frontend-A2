@@ -2,6 +2,7 @@
 // Ejecutar con: pnpm bench
 // Mide el trabajo de React (jsdom no hace layout ni pintado): el desplazamiento
 // se mide aparte en el navegador.
+import { MemoryRouter } from 'react-router-dom'
 import { act, cleanup, render } from '@testing-library/react'
 import { afterAll, bench, describe, vi } from 'vitest'
 import type { LocalHourLog, LocalPlacement } from '@/offline/db'
@@ -36,14 +37,14 @@ afterAll(() => cleanup())
 describe('libro de horas con 500 registros', () => {
   bench('montar la página', () => {
     currentLogs = makeLogs(500)
-    const { unmount } = render(<HourLogsPage />)
+    const { unmount } = render(<HourLogsPage />, { wrapper: MemoryRouter })
     unmount()
   }, { time: 3000 })
 
   // useLiveQuery entrega objetos nuevos en cada cambio de la tabla: se simula
   // clonando los 500 registros y añadiendo uno nuevo, como al registrar horas.
   const base = makeLogs(500)
-  let view: ReturnType<typeof render> | undefined
+  let view: Pick<ReturnType<typeof render>, 'rerender' | 'unmount'> | undefined
   let next = 10_000
   bench(
     'registrar una hora con la página abierta',
@@ -54,7 +55,7 @@ describe('libro de horas con 500 registros', () => {
     {
       setup: () => {
         currentLogs = base
-        view = render(<HourLogsPage />)
+        view = render(<HourLogsPage />, { wrapper: MemoryRouter })
       },
       teardown: () => view?.unmount(),
       time: 3000,

@@ -195,3 +195,11 @@ export function NoResults({ onClear }: { onClear: () => void }) {
     />
   )
 }
+
+/**
+ * Lo que va cuando no hay filas: el estado vacío propio de la pantalla si de
+ * verdad no hay datos, o «nada coincide» si los filtros lo dejaron vacío.
+ */
+export function ListEmpty<T>({ listing, children }: { listing: Listing<T>; children: ReactNode }) {
+  return listing.total === 0 ? <>{children}</> : <NoResults onClear={listing.clear} />
+}

@@ -1,7 +1,8 @@
-import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ApiError, api } from '@/api/client'
 import { Chip } from '@/components/Chip'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState, LoadingState, Section } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { parseLocalDate } from '@/lib/date'
-import { plural } from '@/lib/utils'
+import { useListing } from '@/lib/useListing'
 import { db, type LocalDocument } from '@/offline/db'
 import { usePlacement } from '@/offline/hooks/usePlacement'
 
@@ -65,49 +66,72 @@ function RequiredDocuments({ documents }: { documents: LocalDocument[] | undefin
   )
 }
 
-function DocumentsList({ documents }: { documents: LocalDocument[] | undefined }) {
-  if (documents === undefined) {
-    return (
-      <Section title="Todos tus documentos">
-        <LoadingState>Cargando documentos…</LoadingState>
-      </Section>
-    )
-  }
+const DOC_STATUS_OPTIONS = [
+  { value: 'PENDING', label: 'Pendiente' },
+  { value: 'VALIDATED', label: 'Validado' },
+  { value: 'REJECTED', label: 'Rechazado' },
+]
 
-  if (documents.length === 0) {
-    return (
-      <Section title="Todos tus documentos">
-        <EmptyState
-          title="Todavía no has subido documentos"
-          description="Empieza por el convenio y el seguro."
-        />
-      </Section>
-    )
-  }
+function DocumentRows({ documents }: { documents: LocalDocument[] }) {
+  return (
+    <div className="divide-y divide-paperRule">
+      {documents.map((doc) => (
+        <div key={doc.id} className={DOC_ROW_CLASS}>
+          <div className="min-w-0">
+            <div className="truncate text-14 font-semibold text-ink">{doc.filename}</div>
+            <div className="mt-0.5 text-12 text-inkSoft">
+              {KIND_LABEL[doc.kind as DocumentKind] ?? doc.kind} ·{' '}
+              <span className="font-data">{formatDate(doc.updatedAt)}</span>
+            </div>
+          </div>
+          <StatusBadge status={doc.status} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DocumentsList({ documents }: { documents: LocalDocument[] | undefined }) {
+  // Lo más reciente primero; se lee de Dexie, así que filtra sin conexión.
+  const sorted = useMemo(
+    () => documents?.slice().sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
+    [documents],
+  )
+  const listing = useListing(sorted, {
+    searchText: (doc) => `${doc.filename} ${KIND_LABEL[doc.kind as DocumentKind] ?? doc.kind}`,
+    filters: {
+      tipo: (doc, value) => doc.kind === value,
+      estado: (doc, value) => doc.status === value,
+    },
+  })
+  const pageItems = listing.pageItems
 
   return (
-    <Section
-      title="Todos tus documentos"
-      aside={
-        <span className="font-data text-12 text-inkSoft">
-          {plural(documents.length, 'documento', 'documentos')}
-        </span>
-      }
-    >
-      <div className="divide-y divide-paperRule">
-        {documents.map((doc, index) => (
-          <div key={index} className={DOC_ROW_CLASS}>
-            <div className="min-w-0">
-              <div className="truncate text-14 font-semibold text-ink">{doc.filename}</div>
-              <div className="mt-0.5 text-12 text-inkSoft">
-                {KIND_LABEL[doc.kind as DocumentKind] ?? doc.kind} ·{' '}
-                <span className="font-data">{formatDate(doc.updatedAt)}</span>
-              </div>
-            </div>
-            <StatusBadge status={doc.status} />
-          </div>
-        ))}
-      </div>
+    <Section title="Todos tus documentos">
+      {documents && documents.length > 0 ? (
+        <div className="border-b border-paperRule px-[18px] py-3">
+          <ListToolbar
+            listing={listing}
+            searchPlaceholder="Buscar por nombre de archivo"
+            filters={[
+              {
+                name: 'tipo',
+                label: 'Tipo',
+                options: (Object.keys(KIND_LABEL) as DocumentKind[]).map((k) => ({ value: k, label: KIND_LABEL[k] })),
+              },
+              { name: 'estado', label: 'Estado', options: DOC_STATUS_OPTIONS },
+            ]}
+          />
+        </div>
+      ) : null}
+      {!pageItems ? <LoadingState>Cargando documentos…</LoadingState> : null}
+      {pageItems && pageItems.length === 0 ? (
+        <ListEmpty listing={listing}>
+          <EmptyState title="Todavía no has subido documentos" description="Empieza por el convenio y el seguro." />
+        </ListEmpty>
+      ) : null}
+      {pageItems && pageItems.length > 0 ? <DocumentRows documents={pageItems} /> : null}
+      <Pagination listing={listing} noun={['documento', 'documentos']} />
     </Section>
   )
 }
