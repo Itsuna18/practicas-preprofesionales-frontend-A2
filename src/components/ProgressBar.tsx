@@ -35,8 +35,17 @@ export function ProgressBar({
         className,
       )}
     >
-      <span className="block h-full bg-stamp" style={{ width: `${value}%` }} />
-      <span className="block h-full bg-dotPending" style={{ width: `${pendingValue}%` }} />
+      {/* Crece desde la izquierda al aparecer y se desliza cuando cambia. */}
+      <span className="flex h-full w-full origin-left animate-progress-grow">
+        <span
+          className="block h-full bg-stamp transition-[width] duration-700 ease-out"
+          style={{ width: `${value}%` }}
+        />
+        <span
+          className="block h-full bg-dotPending transition-[width] duration-700 ease-out"
+          style={{ width: `${pendingValue}%` }}
+        />
+      </span>
     </div>
   )
 }

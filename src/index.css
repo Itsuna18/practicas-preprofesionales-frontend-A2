@@ -47,8 +47,48 @@
     --scrim: 212 70% 13%; /* base del velo del modal */
   }
 
+  /* Modo oscuro: negros profundos con superficies escalonadas, texto casi
+     blanco y acentos aclarados para mantener contraste AA sobre fondo oscuro.
+     El primario pasa a azul claro, así que el texto sobre él (text-surface)
+     queda oscuro y legible. */
+  .dark {
+    --paper: 220 14% 5%; /* #0B0C0E */
+    --surface: 220 12% 9%; /* #14161A */
+    --well: 220 11% 12%; /* #1A1C21 */
+    --soft: 220 10% 15%; /* #22252A */
+    --hero: 213 42% 14%; /* #142235 */
+
+    --line: 220 9% 21%; /* #31353C */
+    --paper-rule: 220 9% 16%; /* #25282D */
+
+    --ink: 0 0% 98%; /* #FAFAFA */
+    --ink-deep: 213 30% 88%; /* #D9E1EC */
+    --ink-body: 215 14% 81%; /* #C7CDD6 */
+    --ink-mid: 215 11% 74%;
+    --ink-soft: 215 10% 67%; /* #A5ABB5 */
+    --ink-mute: 215 9% 58%; /* #8E949E */
+
+    --stamp: 212 92% 70%; /* #66AAF7 */
+    --pending: 37 92% 64%; /* #F7B84E */
+    --void: 4 88% 70%; /* #F57A70 */
+
+    --chip-stamp: 212 48% 17%;
+    --chip-pending: 37 50% 14%;
+    --chip-void: 4 48% 16%;
+    --dot-pending: 37 88% 56%;
+    --dot-void: 4 82% 62%;
+
+    --nav-hover: 220 10% 14%;
+    --pill-hover: 220 10% 17%;
+    --badge-soft: 212 32% 23%;
+    --scrim: 0 0% 0%;
+  }
+
   body {
     @apply bg-paper text-ink antialiased;
+    transition:
+      background-color 200ms ease-in-out,
+      color 200ms ease-in-out;
     font-family: 'IBM Plex Sans Variable', system-ui, sans-serif;
   }
 
