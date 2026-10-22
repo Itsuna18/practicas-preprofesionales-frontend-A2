@@ -2,18 +2,27 @@ import { useEffect, useState } from 'react'
 import { type AccreditationRow, reportForPeriod } from '@/api/accreditation'
 import { ApiError } from '@/api/client'
 import { FilterTabs } from '@/components/FilterTabs'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncSection, EmptyState, Panel, TableHeaderRow, rowClass } from '@/components/Panel'
 import { ProgressBar } from '@/components/ProgressBar'
 import { StatCard, StatGrid } from '@/components/StatCard'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Ledger } from '@/components/ledger/Ledger'
+import { useListing } from '@/lib/useListing'
 import { plural } from '@/lib/utils'
 
 // El backend exige `period` con formato AAAA-1/AAAA-2 (ver AccreditationQueryDto);
 // el selector nunca debe poder mandar un valor vacío, así que se restringe a
 // estas dos opciones fijas del periodo académico vigente.
 const PERIODS = ['2026-1', '2026-2'] as const
+
+const LEVEL_OPTIONS = [
+  { value: 'ACREDITADO', label: 'Acreditado' },
+  { value: 'ACREDITADO_CON_OBSERVACIONES', label: 'Con observaciones' },
+  { value: 'PENDIENTE', label: 'Pendiente' },
+  { value: 'NO_ACREDITADO', label: 'No acreditado' },
+]
 
 function ColumnHeader() {
   return (
@@ -94,6 +103,12 @@ export function AccreditationPage() {
     }
   }, [period])
 
+  const listing = useListing(rows, {
+    searchText: (row) => `${row.studentName} ${row.reasons.join(' ')}`,
+    filters: { nivel: (row, value) => row.level === value },
+    pageSize: 20,
+  })
+
   return (
     <>
       <PageHeader
@@ -117,15 +132,25 @@ export function AccreditationPage() {
 
       {rows ? <AccreditationStats rows={rows} /> : null}
 
+      {rows && rows.length > 0 ? (
+        <ListToolbar
+          listing={listing}
+          searchPlaceholder="Buscar por estudiante o motivo"
+          filters={[{ name: 'nivel', label: 'Nivel', options: LEVEL_OPTIONS }]}
+        />
+      ) : null}
+
       <AsyncSection
         error={error}
-        data={rows}
+        data={listing.pageItems}
         loadingLabel="Generando acta…"
         empty={
-          <EmptyState
-            title="No hay placements en este periodo"
-            description="Probá con el otro periodo académico."
-          />
+          <ListEmpty listing={listing}>
+            <EmptyState
+              title="No hay placements en este periodo"
+              description="Probá con el otro periodo académico."
+            />
+          </ListEmpty>
         }
       >
         {(items) => (
@@ -135,6 +160,7 @@ export function AccreditationPage() {
                 <AccreditationRowItem key={row.placementId} row={row} />
               ))}
             </Ledger>
+            <Pagination listing={listing} noun={['practicante', 'practicantes']} />
           </Panel>
         )}
       </AsyncSection>

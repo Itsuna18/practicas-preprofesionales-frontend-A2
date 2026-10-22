@@ -1,8 +1,10 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError, api } from '@/api/client'
+import { HOUR_STATUS_OPTIONS, hourLogFilters, monthOptions } from '@/components/HourLogsBrowser'
 import { HoursProgressPanel } from '@/components/HoursProgressPanel'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState, LoadingState, Panel } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -22,6 +24,7 @@ import { Ledger, LedgerHeaderRow } from '@/components/ledger/Ledger'
 import { LedgerRow } from '@/components/ledger/LedgerRow'
 import { parseLocalDate } from '@/lib/date'
 import { summarizeHours } from '@/lib/hours'
+import { useListing } from '@/lib/useListing'
 import { plural } from '@/lib/utils'
 import { db, type LocalHourLog, type LocalPlacement } from '@/offline/db'
 import { syncNow } from '@/offline/sync/scheduler'
@@ -91,22 +94,11 @@ interface ReviewListProps {
   onReject: (log: LocalHourLog) => void
 }
 
+/** Registros en el orden recibido: la página ordena (lo más reciente primero) y pagina. */
 function ReviewList({ logs, actionState, onApprove, onReject }: ReviewListProps) {
-  if (logs.length === 0) {
-    return (
-      <EmptyState
-        title="No tienes horas pendientes de revisar"
-        description="Cuando tu practicante envíe horas nuevas, aparecen acá."
-      />
-    )
-  }
-
   return (
     <Ledger header={<LedgerColumnHeader />}>
-      {logs
-        .slice()
-        .reverse()
-        .map((log) => (
+      {logs.map((log) => (
           <LedgerRow key={log.id} syncState={log.syncState}>
             <span className="font-data text-14 text-ink sm:w-28">{formatDate(log.date)}</span>
             <span className="font-data text-13 text-inkSoft sm:w-28">
@@ -128,6 +120,47 @@ function ReviewList({ logs, actionState, onApprove, onReject }: ReviewListProps)
           </LedgerRow>
         ))}
     </Ledger>
+  )
+}
+
+/** Búsqueda, filtros (estado y mes) y paginación sobre el libro del practicante. Lee de Dexie. */
+function ReviewBrowser({ logs, ...actions }: ReviewListProps) {
+  const newestFirst = useMemo(() => logs.slice().reverse(), [logs])
+  const months = useMemo(() => monthOptions(logs), [logs])
+  const listing = useListing(newestFirst, {
+    searchText: (log) => log.activity,
+    filters: { estado: hourLogFilters.estado, mes: hourLogFilters.mes },
+    pageSize: 20,
+  })
+  const pageItems = listing.pageItems ?? []
+  const statusOptions = HOUR_STATUS_OPTIONS.map((o) => (o.value === 'SUBMITTED' ? { ...o, label: 'Por revisar' } : o))
+
+  return (
+    <>
+      {logs.length > 0 ? (
+        <ListToolbar
+          listing={listing}
+          searchPlaceholder="Buscar en las actividades"
+          filters={[
+            { name: 'estado', label: 'Estado', options: statusOptions },
+            { name: 'mes', label: 'Mes', options: months },
+          ]}
+        />
+      ) : null}
+      <Panel>
+        {pageItems.length === 0 ? (
+          <ListEmpty listing={listing}>
+            <EmptyState
+              title="No tienes horas pendientes de revisar"
+              description="Cuando tu practicante envíe horas nuevas, aparecen acá."
+            />
+          </ListEmpty>
+        ) : (
+          <ReviewList logs={pageItems} {...actions} />
+        )}
+        <Pagination listing={listing} noun={['registro', 'registros']} />
+      </Panel>
+    </>
   )
 }
 
@@ -321,20 +354,12 @@ export function ReviewHoursPage() {
         </p>
       ) : null}
 
-      <Panel
-        toolbar={
-          <span className="ml-auto font-data text-12 text-inkSoft">
-            {plural(pendingCount, 'registro', 'registros')} sin revisar
-          </span>
-        }
-      >
-        <ReviewList
-          logs={logs}
-          actionState={actionState}
-          onApprove={(logId) => reviewLog(logId, 'APPROVED')}
-          onReject={setRejectingLog}
-        />
-      </Panel>
+      <ReviewBrowser
+        logs={logs}
+        actionState={actionState}
+        onApprove={(logId) => reviewLog(logId, 'APPROVED')}
+        onReject={setRejectingLog}
+      />
 
       <RejectDialog
         log={rejectingLog}
