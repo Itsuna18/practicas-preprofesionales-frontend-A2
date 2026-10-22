@@ -1,4 +1,4 @@
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Bot, MessageCircle, RotateCcw, Send, X } from 'lucide-react'
 import { ApiError } from '@/api/client'
 import { type ChatMessage, sendChat } from '@/api/assistant'
@@ -28,6 +28,16 @@ function TypingIndicator() {
   )
 }
 
+/**
+ * Los modelos marcan el énfasis con **negritas** de Markdown: se pintan como
+ * <strong> armando nodos de React (nunca HTML crudo).
+ */
+export function withBold(text: string): ReactNode[] {
+  return text
+    .split(/\*\*(.+?)\*\*/g)
+    .map((part, index) => (index % 2 === 1 ? <strong key={index}>{part}</strong> : part))
+}
+
 function Bubble({ message }: { message: ChatMessage }) {
   const mine = message.role === 'user'
   return (
@@ -39,7 +49,7 @@ function Bubble({ message }: { message: ChatMessage }) {
         )}
       >
         <span className="sr-only">{mine ? 'Tú: ' : 'Asistente: '}</span>
-        {message.content}
+        {mine ? message.content : withBold(message.content)}
       </p>
     </div>
   )

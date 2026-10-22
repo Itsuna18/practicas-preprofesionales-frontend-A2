@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api/client'
 import { type ChatMessage, trimConversation } from '@/api/assistant'
-import { AssistantChat } from './AssistantChat'
+import { AssistantChat, withBold } from './AssistantChat'
 
 // Implementación simple (no vi.fn) para que los rechazos atrapados no se
 // reporten como no manejados.
@@ -116,5 +116,20 @@ describe('trimConversation', () => {
 
   it('returns nothing when there is no message from the person', () => {
     expect(trimConversation([{ role: 'assistant', content: 'hola' }])).toEqual([])
+  })
+})
+
+describe('withBold', () => {
+  it('turns Markdown bold into strong elements and keeps the rest as text', () => {
+    const { container } = render(<p>{withBold('Te faltan **180 horas**, tu tutor es **Ana**.')}</p>)
+    expect(screen.getByText('180 horas').tagName).toBe('STRONG')
+    expect(screen.getByText('Ana').tagName).toBe('STRONG')
+    expect(container.textContent).toBe('Te faltan 180 horas, tu tutor es Ana.')
+  })
+
+  it('leaves text without bold untouched and never renders HTML', () => {
+    const { container } = render(<p>{withBold('<b>hola</b> sin negritas')}</p>)
+    expect(container.querySelector('b')).toBeNull()
+    expect(container.textContent).toBe('<b>hola</b> sin negritas')
   })
 })
