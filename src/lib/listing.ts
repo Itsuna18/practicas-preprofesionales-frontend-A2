@@ -54,3 +54,27 @@ export function pageWindow(page: number, totalPages: number): (number | '…')[]
   }
   return result
 }
+
+/** Largo máximo de una búsqueda. */
+export const SEARCH_MAX_LENGTH = 60
+
+/** Signos que sí se aceptan además de letras, números y espacios. */
+export const SEARCH_ALLOWED_SYMBOLS = '. @ # - _'
+
+// Letras de cualquier idioma (tildes, ñ, ü), números, espacios y . @ # - _
+// (correos, "Estudiante #101", nombres compuestos). El resto se quita.
+const FORBIDDEN = /[^\p{L}\p{N}\s.@#_-]/gu
+
+/**
+ * Limpia lo que se escribe en un buscador: quita caracteres especiales,
+ * junta espacios repetidos y corta al largo máximo. Se aplica al escribir y
+ * también al leer `?q=` de la URL, así un enlace armado a mano no los cuela.
+ */
+export function sanitizeSearch(text: string): string {
+  return text.replace(FORBIDDEN, '').replace(/\s{2,}/g, ' ').trimStart().slice(0, SEARCH_MAX_LENGTH)
+}
+
+/** Si el texto trae algún carácter que el buscador no admite. */
+export function hasForbiddenChars(text: string): boolean {
+  return new RegExp(FORBIDDEN.source, 'u').test(text)
+}

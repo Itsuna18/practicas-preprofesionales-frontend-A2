@@ -1,8 +1,8 @@
-import { type ReactNode, useId } from 'react'
+import { type ReactNode, useEffect, useId, useState } from 'react'
 import { ChevronLeft, ChevronRight, Search, SearchX, X } from 'lucide-react'
 import { EmptyState } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
-import { pageWindow } from '@/lib/listing'
+import { SEARCH_ALLOWED_SYMBOLS, SEARCH_MAX_LENGTH, hasForbiddenChars, pageWindow, sanitizeSearch } from '@/lib/listing'
 import { PAGE_SIZES, type Listing } from '@/lib/useListing'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,21 @@ export interface ListFilter {
 }
 
 function SearchField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  const hintId = useId()
+  const [blocked, setBlocked] = useState(false)
+
+  // El aviso de «carácter no permitido» se esconde solo a los pocos segundos.
+  useEffect(() => {
+    if (!blocked) return
+    const timer = setTimeout(() => setBlocked(false), 3000)
+    return () => clearTimeout(timer)
+  }, [blocked])
+
+  function handleChange(raw: string) {
+    if (hasForbiddenChars(raw)) setBlocked(true)
+    onChange(sanitizeSearch(raw))
+  }
+
   return (
     <div className="relative min-w-[200px] flex-1">
       <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-inkMute" />
@@ -28,11 +43,28 @@ function SearchField({ value, onChange, placeholder }: { value: string; onChange
         type="search"
         role="searchbox"
         aria-label={placeholder}
+        aria-describedby={hintId}
+        aria-invalid={blocked || undefined}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        maxLength={SEARCH_MAX_LENGTH}
+        onChange={(event) => handleChange(event.target.value)}
         placeholder={placeholder}
-        className={cn(CONTROL, 'w-full pl-9 pr-9 placeholder:text-inkMute [&::-webkit-search-cancel-button]:hidden')}
+        className={cn(
+          CONTROL,
+          'w-full pl-9 pr-9 placeholder:text-inkMute [&::-webkit-search-cancel-button]:hidden',
+          blocked && 'border-void focus-visible:border-void focus-visible:ring-void/25',
+        )}
       />
+      <p
+        id={hintId}
+        role="status"
+        className={cn(
+          'absolute left-0 top-full z-10 mt-1 rounded-md bg-chipVoid px-2 py-1 text-12 text-void transition-opacity duration-200',
+          blocked ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+      >
+        {blocked ? `Solo letras, números, espacios y ${SEARCH_ALLOWED_SYMBOLS}` : ''}
+      </p>
       {value ? (
         <button
           type="button"
