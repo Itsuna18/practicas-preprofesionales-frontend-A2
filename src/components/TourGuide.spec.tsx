@@ -92,6 +92,22 @@ describe('TourGuide', () => {
   })
 })
 
+describe('TourGuide inside a header with backdrop-filter', () => {
+  it('renders the overlay in <body>, outside the header, so the card stays on screen', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      <header data-testid="header" style={{ backdropFilter: 'blur(8px)' }}>
+        <TourGuide />
+      </header>,
+    )
+    act(() => vi.advanceTimersByTime(700))
+
+    const dialog = screen.getByRole('dialog')
+    expect(screen.getByTestId('header')).not.toContainElement(dialog)
+    expect(screen.getByTestId('header')).toContainElement(screen.getByRole('button', { name: 'Ver el tour de bienvenida' }))
+  })
+})
+
 describe('tour storage', () => {
   it('keeps the record per user and version', () => {
     expect(tourKey(5)).toBe('tour:v1:5')
