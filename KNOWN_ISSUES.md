@@ -19,7 +19,7 @@ la vas a notar mirando la pantalla, pero si escribes un test que aserte sobre el
 los estados del indicador, la vas a agarrar. No nos alcanzó a arreglar. Hay que juntar
 ambos `setStatus` en uno solo, o calcular `pending` antes de marcar `syncing: false`.
 
-## D-09 · `HourLogForm.tsx` hace de todo
+## D-09 · `HourLogForm.tsx` hace de todo [PAGADA en E6-04]
 
 `src/components/HourLogForm.tsx`, 348 líneas.
 
