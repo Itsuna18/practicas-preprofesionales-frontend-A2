@@ -12,9 +12,10 @@ import {
 } from '@/api/companies'
 import { ApiError } from '@/api/client'
 import { useAuth } from '@/auth/AuthContext'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { OfferCard, OfferGrid } from '@/components/OfferCard'
 import { PageHeader } from '@/components/PageHeader'
-import { AsyncSection, EmptyState } from '@/components/Panel'
+import { AsyncSection, EmptyState, Panel } from '@/components/Panel'
 import { StatCard, StatGrid } from '@/components/StatCard'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { parseLocalDate } from '@/lib/date'
+import { useListing } from '@/lib/useListing'
 import { plural } from '@/lib/utils'
 
 type OfferActionState = 'publishing' | 'closing' | 'published' | 'closed' | null
@@ -66,6 +68,18 @@ function formatDate(dateValue: string): string {
 function formatPeriod(periodStart: string, periodEnd: string): string {
   return `${formatDate(periodStart)} – ${formatDate(periodEnd)}`
 }
+
+const OFFER_STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'Borrador' },
+  { value: 'PUBLISHED', label: 'Publicada' },
+  { value: 'CLOSED', label: 'Cerrada' },
+]
+
+const MODALITY_OPTIONS = [
+  { value: 'PRESENCIAL', label: 'Presencial' },
+  { value: 'HIBRIDA', label: 'Híbrida' },
+  { value: 'REMOTA', label: 'Remota' },
+]
 
 function acceptedCount(offer: CompanyOffer): number {
   return offer.applications.filter((application) => application.status === 'ACCEPTED').length
@@ -370,6 +384,14 @@ export function CompanyOffersPage() {
 
   const myCompany = companies?.find((company) => company.id === user?.companyId)
 
+  const listing = useListing(offers, {
+    searchText: (offer) => `${offer.title} ${offer.description}`,
+    filters: {
+      estado: (offer, value) => offer.status === value,
+      modalidad: (offer, value) => offer.modality === value,
+    },
+  })
+
   async function handlePublish(offerId: number) {
     setActionError(null)
     setActionState((prev) => ({ ...prev, [offerId]: 'publishing' }))
@@ -465,34 +487,52 @@ export function CompanyOffersPage() {
         </p>
       ) : null}
 
+      {offers && offers.length > 0 ? (
+        <ListToolbar
+          listing={listing}
+          searchPlaceholder="Buscar por título o descripción"
+          filters={[
+            { name: 'estado', label: 'Estado', options: OFFER_STATUS_OPTIONS },
+            { name: 'modalidad', label: 'Modalidad', options: MODALITY_OPTIONS },
+          ]}
+        />
+      ) : null}
+
       <AsyncSection
         error={error}
-        data={offers}
+        data={listing.pageItems}
         loadingLabel="Cargando ofertas…"
         empty={
-          <EmptyState
-            title="Todavía no has publicado ofertas"
-            description="Publicá una vacante para que los estudiantes puedan postular."
-            action={
-              <Button type="button" size="sm" onClick={openDialog}>
-                Publicar oferta
-              </Button>
-            }
-          />
+          <ListEmpty listing={listing}>
+            <EmptyState
+              title="Todavía no has publicado ofertas"
+              description="Publicá una vacante para que los estudiantes puedan postular."
+              action={
+                <Button type="button" size="sm" onClick={openDialog}>
+                  Publicar oferta
+                </Button>
+              }
+            />
+          </ListEmpty>
         }
       >
         {(items) => (
-          <OfferGrid>
-            {items.map((offer) => (
-              <CompanyOfferCard
-                key={offer.id}
-                offer={offer}
-                state={actionState[offer.id] ?? null}
-                onPublish={handlePublish}
-                onClose={handleClose}
-              />
-            ))}
-          </OfferGrid>
+          <>
+            <OfferGrid>
+              {items.map((offer) => (
+                <CompanyOfferCard
+                  key={offer.id}
+                  offer={offer}
+                  state={actionState[offer.id] ?? null}
+                  onPublish={handlePublish}
+                  onClose={handleClose}
+                />
+              ))}
+            </OfferGrid>
+            <Panel>
+              <Pagination listing={listing} noun={['oferta', 'ofertas']} />
+            </Panel>
+          </>
         )}
       </AsyncSection>
 
