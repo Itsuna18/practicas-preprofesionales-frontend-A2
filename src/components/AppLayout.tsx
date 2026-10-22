@@ -39,6 +39,7 @@ const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
       items: [
         { path: '/ofertas', label: 'Ofertas' },
         { path: '/postulaciones', label: 'Mis postulaciones' },
+        { path: '/perfil', label: 'Mi perfil' },
       ],
     },
   ],

@@ -16,6 +16,7 @@ import { EvaluatePage } from '@/pages/EvaluatePage'
 import { CompanyOffersPage } from '@/pages/CompanyOffersPage'
 import { OfferApplicationsPage } from '@/pages/OfferApplicationsPage'
 import { AccreditationPage } from '@/pages/AccreditationPage'
+import { ProfilePage } from '@/pages/ProfilePage'
 
 const ALL_ROLES: Role[] = ['STUDENT', 'TUTOR', 'COMPANY', 'COORDINATOR']
 
@@ -36,6 +37,7 @@ const ROUTES: RouteDef[] = [
   { path: '/ofertas', roles: ['STUDENT'], element: <OffersPage /> },
   { path: '/ofertas/:id', roles: ['STUDENT'], element: <OfferDetailPage /> },
   { path: '/postulaciones', roles: ['STUDENT'], element: <MyApplicationsPage /> },
+  { path: '/perfil', roles: ['STUDENT'], element: <ProfilePage /> },
   { path: '/mi-practica', roles: ['STUDENT'], element: <MyPlacementPage /> },
   { path: '/horas', roles: ['STUDENT'], element: <HourLogsPage /> },
   { path: '/documentos', roles: ['STUDENT'], element: <DocumentsPage /> },
