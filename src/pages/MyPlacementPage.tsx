@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
+import { StudentAchievements } from '@/components/AchievementsPanel'
 import { HeroCard, HeroPanel } from '@/components/HeroPanel'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState, LoadingState, Section } from '@/components/Panel'
@@ -245,6 +246,8 @@ export function MyPlacementPage() {
         pendingDocuments={pendingDocuments}
         logCount={logs?.length ?? 0}
       />
+
+      <StudentAchievements logs={logs} requiredHours={placement.requiredHours} />
 
       <Section title="Datos de la práctica">
         <dl className="divide-y divide-paperRule">

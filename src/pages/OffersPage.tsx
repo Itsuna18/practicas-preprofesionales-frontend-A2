@@ -2,15 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '@/api/client'
 import { type Offer, listOffers } from '@/api/offers'
-import { FilterTabs } from '@/components/FilterTabs'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { OfferCard, OfferGrid } from '@/components/OfferCard'
 import { PageHeader } from '@/components/PageHeader'
-import { AsyncSection, EmptyState } from '@/components/Panel'
+import { RecommendedOffers } from '@/components/RecommendedOffers'
+import { AsyncSection, EmptyState, Panel } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import { parseLocalDate } from '@/lib/date'
+import { useListing } from '@/lib/useListing'
 import { plural } from '@/lib/utils'
 
-const ALL_MODALITIES = 'TODAS'
+const MODALITY_LABEL: Record<string, string> = {
+  PRESENCIAL: 'Presencial',
+  HIBRIDA: 'Híbrida',
+  REMOTA: 'Remota',
+}
 
 function formatDate(dateValue: string): string {
   const parsed = parseLocalDate(dateValue)
@@ -22,32 +28,6 @@ function formatPeriod(periodStart: string, periodEnd: string): string {
   return `${formatDate(periodStart)} – ${formatDate(periodEnd)}`
 }
 
-interface ToolbarProps {
-  modalities: string[]
-  value: string
-  onChange: (value: string) => void
-  count: number
-}
-
-function OffersToolbar({ modalities, value, onChange, count }: ToolbarProps) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <FilterTabs
-        label="Filtrar por modalidad"
-        value={value}
-        onChange={onChange}
-        options={[
-          { value: ALL_MODALITIES, label: 'Todas' },
-          ...modalities.map((modality) => ({ value: modality, label: modality })),
-        ]}
-      />
-      <span className="ml-auto font-data text-12 text-inkSoft">
-        {plural(count, 'oferta abierta', 'ofertas abiertas')}
-      </span>
-    </div>
-  )
-}
-
 function OffersList({ offers }: { offers: Offer[] }) {
   return (
     <OfferGrid>
@@ -57,7 +37,7 @@ function OffersList({ offers }: { offers: Offer[] }) {
           title={offer.title}
           subtitle={offer.company.name}
           tags={[
-            offer.modality,
+            MODALITY_LABEL[offer.modality] ?? offer.modality,
             plural(offer.seats, 'cupo', 'cupos'),
             `${offer.requiredHours} h`,
           ]}
@@ -77,7 +57,6 @@ function OffersList({ offers }: { offers: Offer[] }) {
 export function OffersPage() {
   const [offers, setOffers] = useState<Offer[] | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
-  const [modalityFilter, setModalityFilter] = useState(ALL_MODALITIES)
 
   useEffect(() => {
     let cancelled = false
@@ -94,16 +73,15 @@ export function OffersPage() {
     }
   }, [])
 
-  const modalities = useMemo(() => {
-    if (!offers) return []
-    return Array.from(new Set(offers.map((offer) => offer.modality))).sort()
-  }, [offers])
+  const modalities = useMemo(
+    () => (offers ? Array.from(new Set(offers.map((offer) => offer.modality))).sort() : []),
+    [offers],
+  )
 
-  const visibleOffers = useMemo(() => {
-    if (!offers) return undefined
-    if (modalityFilter === ALL_MODALITIES) return offers
-    return offers.filter((offer) => offer.modality === modalityFilter)
-  }, [offers, modalityFilter])
+  const listing = useListing(offers, {
+    searchText: (offer) => `${offer.title} ${offer.company.name} ${offer.description}`,
+    filters: { modalidad: (offer, value) => offer.modality === value },
+  })
 
   return (
     <>
@@ -112,27 +90,43 @@ export function OffersPage() {
         subtitle="Publicadas por empresas con convenio y aprobadas por la coordinación."
       />
 
-      {modalities.length > 0 ? (
-        <OffersToolbar
-          modalities={modalities}
-          value={modalityFilter}
-          onChange={setModalityFilter}
-          count={visibleOffers?.length ?? 0}
+      <RecommendedOffers />
+
+      {offers && offers.length > 0 ? (
+        <ListToolbar
+          listing={listing}
+          searchPlaceholder="Buscar por puesto, empresa o descripción"
+          filters={[
+            {
+              name: 'modalidad',
+              label: 'Modalidad',
+              options: modalities.map((m) => ({ value: m, label: MODALITY_LABEL[m] ?? m })),
+            },
+          ]}
         />
       ) : null}
 
       <AsyncSection
         error={error}
-        data={visibleOffers}
+        data={listing.pageItems}
         loadingLabel="Cargando ofertas…"
         empty={
-          <EmptyState
-            title="No hay ofertas publicadas para este periodo"
-            description="Vuelve a revisar más adelante."
-          />
+          <ListEmpty listing={listing}>
+            <EmptyState
+              title="No hay ofertas publicadas para este periodo"
+              description="Vuelve a revisar más adelante."
+            />
+          </ListEmpty>
         }
       >
-        {(items) => <OffersList offers={items} />}
+        {(items) => (
+          <>
+            <OffersList offers={items} />
+            <Panel>
+              <Pagination listing={listing} noun={['oferta', 'ofertas']} />
+            </Panel>
+          </>
+        )}
       </AsyncSection>
     </>
   )

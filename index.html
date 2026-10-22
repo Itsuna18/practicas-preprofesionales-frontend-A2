@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#6B4BA8" />
+    <meta name="theme-color" content="#0E3A6B" />
+    <script>
+      // Aplica el tema antes de pintar para que no parpadee (ver src/lib/theme.ts).
+      try {
+        var t = localStorage.getItem("theme")
+        if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+        if (t === "dark") document.documentElement.classList.add("dark")
+        document.documentElement.style.colorScheme = t
+      } catch (e) {}
+    </script>
     <title>Prácticas Preprofesionales</title>
   </head>
   <body>

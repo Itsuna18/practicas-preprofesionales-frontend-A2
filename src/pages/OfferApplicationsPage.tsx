@@ -8,14 +8,24 @@ import {
 } from '@/api/companies'
 import { ApiError } from '@/api/client'
 import { type Offer, getOffer } from '@/api/offers'
+import { ListEmpty, ListToolbar, Pagination } from '@/components/ListControls'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState, LoadingState, Panel, TableHeaderRow, rowClass } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Ledger } from '@/components/ledger/Ledger'
 import { parseLocalDate } from '@/lib/date'
+import { type Listing, useListing } from '@/lib/useListing'
 
 type DecisionState = 'interviewing' | 'accepting' | 'rejecting' | null
+
+const APPLICATION_STATUS_OPTIONS = [
+  { value: 'SUBMITTED', label: 'Enviada' },
+  { value: 'INTERVIEW', label: 'Entrevista' },
+  { value: 'ACCEPTED', label: 'Aceptada' },
+  { value: 'REJECTED', label: 'Rechazada' },
+  { value: 'WITHDRAWN', label: 'Retirada' },
+]
 
 function formatDate(dateValue: string): string {
   const parsed = parseLocalDate(dateValue)
@@ -57,6 +67,89 @@ function BackLink() {
  * de cupos — ocultar el botón en el cliente escondería esa condición de
  * carrera real que el equipo debe poder encontrar.
  */
+interface ApplicationsTableProps {
+  listing: Listing<OfferApplication>
+  decisionState: Record<number, DecisionState>
+  onDecide: (applicationId: number, status: ApplicationDecision, state: DecisionState) => void
+}
+
+function ApplicationsTable({ listing, decisionState, onDecide }: ApplicationsTableProps) {
+  return (
+  <Panel>
+    {(listing.pageItems ?? []).length === 0 ? (
+      <ListEmpty listing={listing}>
+        <EmptyState
+          title="Todavía nadie postuló"
+          description="Cuando la oferta esté publicada, los estudiantes pueden aplicar."
+        />
+      </ListEmpty>
+    ) : (
+      <Ledger header={<ColumnHeader />}>
+        {(listing.pageItems ?? []).map((application) => {
+          const state = decisionState[application.id] ?? null
+          const busy = state !== null
+          const decidable =
+            application.status === 'SUBMITTED' || application.status === 'INTERVIEW'
+          return (
+            <div key={application.id} className={rowClass}>
+              <span className="text-14 font-semibold text-ink sm:w-40">
+                {application.student.fullName}
+              </span>
+              <span className="flex-1">
+                <span className="block max-w-[520px] rounded-md bg-soft px-3 py-2.5 text-13 leading-relaxed text-inkDeep">
+                  {application.motivation}
+                </span>
+              </span>
+              <span className="font-data text-13 text-inkSoft sm:w-28">
+                {formatDate(application.submittedAt)}
+              </span>
+              <span className="sm:w-32">
+                <StatusBadge status={application.status} />
+              </span>
+              <span className="flex flex-wrap items-center justify-end gap-1.5 sm:w-60">
+                {decidable ? (
+                  <>
+                    {application.status === 'SUBMITTED' ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onDecide(application.id, 'INTERVIEW', 'interviewing')}
+                        disabled={busy}
+                      >
+                        {state === 'interviewing' ? 'Enviando…' : 'Entrevista'}
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onDecide(application.id, 'ACCEPTED', 'accepting')}
+                      disabled={busy}
+                    >
+                      {state === 'accepting' ? 'Aceptando…' : 'Aceptar'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDecide(application.id, 'REJECTED', 'rejecting')}
+                      disabled={busy}
+                    >
+                      {state === 'rejecting' ? 'Descartando…' : 'Descartar'}
+                    </Button>
+                  </>
+                ) : null}
+              </span>
+            </div>
+          )
+        })}
+      </Ledger>
+    )}
+    <Pagination listing={listing} noun={['postulación', 'postulaciones']} />
+  </Panel>
+  )
+}
+
 export function OfferApplicationsPage() {
   const { id } = useParams<{ id: string }>()
   const offerId = Number(id)
@@ -113,6 +206,11 @@ export function OfferApplicationsPage() {
     }
   }
 
+  const listing = useListing(applications, {
+    searchText: (a) => `${a.student.fullName} ${a.student.email} ${a.motivation}`,
+    filters: { estado: (a, value) => a.status === value },
+  })
+
   if (loadError) {
     return (
       <>
@@ -156,85 +254,15 @@ export function OfferApplicationsPage() {
         </p>
       ) : null}
 
-      <Panel
-        toolbar={
-          applications.length > 0 ? (
-            <span className="ml-auto font-data text-12 text-inkSoft">
-              {applications.length === 1
-                ? '1 postulación'
-                : `${applications.length} postulaciones`}
-            </span>
-          ) : undefined
-        }
-      >
-        {applications.length === 0 ? (
-          <EmptyState
-            title="Todavía nadie postuló"
-            description="Cuando la oferta esté publicada, los estudiantes pueden aplicar."
-          />
-        ) : (
-          <Ledger header={<ColumnHeader />}>
-            {applications.map((application) => {
-              const state = decisionState[application.id] ?? null
-              const busy = state !== null
-              const decidable =
-                application.status === 'SUBMITTED' || application.status === 'INTERVIEW'
-              return (
-                <div key={application.id} className={rowClass}>
-                  <span className="text-14 font-semibold text-ink sm:w-40">
-                    {application.student.fullName}
-                  </span>
-                  <span className="flex-1">
-                    <span className="block max-w-[520px] rounded-md bg-soft px-3 py-2.5 text-13 leading-relaxed text-inkDeep">
-                      {application.motivation}
-                    </span>
-                  </span>
-                  <span className="font-data text-13 text-inkSoft sm:w-28">
-                    {formatDate(application.submittedAt)}
-                  </span>
-                  <span className="sm:w-32">
-                    <StatusBadge status={application.status} />
-                  </span>
-                  <span className="flex flex-wrap items-center justify-end gap-1.5 sm:w-60">
-                    {decidable ? (
-                      <>
-                        {application.status === 'SUBMITTED' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => decide(application.id, 'INTERVIEW', 'interviewing')}
-                            disabled={busy}
-                          >
-                            {state === 'interviewing' ? 'Enviando…' : 'Entrevista'}
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => decide(application.id, 'ACCEPTED', 'accepting')}
-                          disabled={busy}
-                        >
-                          {state === 'accepting' ? 'Aceptando…' : 'Aceptar'}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => decide(application.id, 'REJECTED', 'rejecting')}
-                          disabled={busy}
-                        >
-                          {state === 'rejecting' ? 'Descartando…' : 'Descartar'}
-                        </Button>
-                      </>
-                    ) : null}
-                  </span>
-                </div>
-              )
-            })}
-          </Ledger>
-        )}
-      </Panel>
+      {applications.length > 0 ? (
+        <ListToolbar
+          listing={listing}
+          searchPlaceholder="Buscar por estudiante, correo o motivación"
+          filters={[{ name: 'estado', label: 'Estado', options: APPLICATION_STATUS_OPTIONS }]}
+        />
+      ) : null}
+
+      <ApplicationsTable listing={listing} decisionState={decisionState} onDecide={decide} />
     </>
   )
 }

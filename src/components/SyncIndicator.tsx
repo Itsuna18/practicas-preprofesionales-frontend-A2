@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useOnline } from '@/offline/hooks/useOnline'
 import { useSyncStatus } from '@/offline/hooks/useSyncStatus'
@@ -33,6 +34,7 @@ export function SyncIndicator() {
     <div
       role="status"
       aria-live="polite"
+      data-tour="sync"
       className="flex-none rounded-lg bg-surface px-3.5 py-3"
     >
       <div className="flex items-center gap-2">
@@ -40,8 +42,9 @@ export function SyncIndicator() {
         <span
           aria-hidden="true"
           className={cn(
-            'inline-block size-2.5 flex-none rounded-full border',
+            'inline-block size-2.5 flex-none rounded-full border transition-colors duration-300',
             online ? 'border-stamp bg-stamp' : 'border-2 border-void bg-transparent',
+            busy && 'animate-pulse',
           )}
         />
         <span className={cn('text-13 font-semibold', online ? 'text-ink' : 'text-void')}>
@@ -65,6 +68,7 @@ export function SyncIndicator() {
         onClick={handleSyncNow}
         disabled={busy}
       >
+        <RefreshCw aria-hidden="true" className={cn(busy && 'animate-spin')} />
         {busy ? 'Sincronizando…' : 'Sincronizar ahora'}
       </Button>
     </div>

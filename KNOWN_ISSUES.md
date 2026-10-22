@@ -19,7 +19,7 @@ la vas a notar mirando la pantalla, pero si escribes un test que aserte sobre el
 los estados del indicador, la vas a agarrar. No nos alcanzó a arreglar. Hay que juntar
 ambos `setStatus` en uno solo, o calcular `pending` antes de marcar `syncing: false`.
 
-## D-09 · `HourLogForm.tsx` hace de todo
+## D-09 · `HourLogForm.tsx` hace de todo [PAGADA en E6-04]
 
 `src/components/HourLogForm.tsx`, 348 líneas.
 
@@ -31,12 +31,11 @@ entero para saber qué más se puede romper. Debería partirse en un hook de for
 helpers puros que ya casi están separados (`formatDateForConfirmation`,
 `computeDurationLabel`) y un hook de persistencia aparte. No llegamos.
 
-## D-10 · Los hooks que tocan Dexie no tienen tests
+## D-10 · Los hooks que tocan Dexie no tienen tests [PAGADA en E6-06]
 
-`src/offline/hooks/`: `useHourLogs.ts`, `usePlacement.ts`, `useSyncStatus.ts`. La
-excepción es `useOnline.ts`, que sí tiene spec.
+`src/offline/hooks/`: `useHourLogs.ts`, `usePlacement.ts`, `useSyncStatus.ts`, `useOnline.ts`.
 
-No supimos testear hooks que tocan IndexedDB y lo dejamos así. Todos usan `useLiveQuery` de
+Resuelta en E6-06 agregando suites de tests automatizados (`useHourLogs.spec.ts`, `usePlacement.spec.ts` y `useSyncStatus.spec.ts`) con lectura real de IndexedDB mediante `fake-indexeddb`, alcanzando el 100 % de cobertura en `src/offline/hooks`. Anteriormente: No supimos testear hooks que tocan IndexedDB y lo dejamos así. Todos usan `useLiveQuery` de
 `dexie-react-hooks` contra la base real de Dexie; en otras partes del repo probamos con
 `fake-indexeddb` (mira `offline/db.spec.ts` como referencia) y no debería ser muy distinto
 hacerlo acá, pero nunca nos sentamos a escribirlos. Si vas a tocar cómo se leen las horas o
