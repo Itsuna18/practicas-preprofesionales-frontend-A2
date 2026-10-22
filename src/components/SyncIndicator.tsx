@@ -34,6 +34,7 @@ export function SyncIndicator() {
     <div
       role="status"
       aria-live="polite"
+      data-tour="sync"
       className="flex-none rounded-lg bg-surface px-3.5 py-3"
     >
       <div className="flex items-center gap-2">

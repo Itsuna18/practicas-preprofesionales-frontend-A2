@@ -5,6 +5,7 @@ import { AssistantChat } from '@/components/AssistantChat'
 import { Button } from '@/components/ui/button'
 import { SyncIndicator } from '@/components/SyncIndicator'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { TourGuide } from '@/components/TourGuide'
 import { startSync } from '@/offline/sync/scheduler'
 import { cn } from '@/lib/utils'
 
@@ -81,6 +82,7 @@ export function AppLayout() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <TourGuide />
           <ThemeToggle />
           <div className="flex items-center gap-2.5 rounded-full border border-line py-1 pl-1 pr-2.5">
             <span
@@ -116,6 +118,7 @@ export function AppLayout() {
                     <NavLink
                       key={item.path}
                       to={item.path}
+                      data-tour={`nav-${item.path}`}
                       className={({ isActive }) =>
                         cn(
                           'relative flex h-9 items-center rounded-md px-3 text-14 transition-all duration-200 ease-in-out',

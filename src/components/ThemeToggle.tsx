@@ -9,6 +9,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
+      data-tour="theme"
       onClick={toggleTheme}
       aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       aria-pressed={dark}
