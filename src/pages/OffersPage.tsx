@@ -5,6 +5,7 @@ import { type Offer, listOffers } from '@/api/offers'
 import { FilterTabs } from '@/components/FilterTabs'
 import { OfferCard, OfferGrid } from '@/components/OfferCard'
 import { PageHeader } from '@/components/PageHeader'
+import { RecommendedOffers } from '@/components/RecommendedOffers'
 import { AsyncSection, EmptyState } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import { parseLocalDate } from '@/lib/date'
@@ -111,6 +112,8 @@ export function OffersPage() {
         title="Ofertas de práctica"
         subtitle="Publicadas por empresas con convenio y aprobadas por la coordinación."
       />
+
+      <RecommendedOffers />
 
       {modalities.length > 0 ? (
         <OffersToolbar
