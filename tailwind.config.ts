@@ -99,6 +99,19 @@ export default {
       width: {
         sidebar: '230px',
       },
+      keyframes: {
+        // La barra de progreso crece desde la izquierda al aparecer.
+        'progress-grow': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
+        // Brillo que recorre los esqueletos de carga.
+        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        // Insignia recién desbloqueada.
+        'pop-in': { '0%': { transform: 'scale(0.6)', opacity: '0' }, '70%': { transform: 'scale(1.08)', opacity: '1' }, '100%': { transform: 'scale(1)' } },
+      },
+      animation: {
+        'progress-grow': 'progress-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        shimmer: 'shimmer 1.6s linear infinite',
+        'pop-in': 'pop-in 450ms cubic-bezier(0.22, 1, 0.36, 1) both',
+      },
     },
   },
   plugins: [tailwindcssAnimate],

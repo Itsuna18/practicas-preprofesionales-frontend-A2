@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, type Role } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { SyncIndicator } from '@/components/SyncIndicator'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { startSync } from '@/offline/sync/scheduler'
 import { cn } from '@/lib/utils'
 
@@ -56,6 +57,7 @@ function initialsOf(fullName: string | undefined): string {
 
 export function AppLayout() {
   const { user, role, logout } = useAuth()
+  const location = useLocation()
 
   // Se llama una sola vez para toda la sesión autenticada: AppLayout envuelve
   // todas las rutas protegidas vía <Outlet />, así que no se remonta al
@@ -76,7 +78,8 @@ export function AppLayout() {
           </span>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <div className="flex items-center gap-2.5 rounded-full border border-line py-1 pl-1 pr-2.5">
             <span
               aria-hidden="true"
@@ -113,10 +116,10 @@ export function AppLayout() {
                       to={item.path}
                       className={({ isActive }) =>
                         cn(
-                          'flex h-9 items-center rounded-md px-3 text-14 transition-colors',
+                          'relative flex h-9 items-center rounded-md px-3 text-14 transition-all duration-200 ease-in-out',
                           isActive
-                            ? 'bg-surface font-semibold text-ink'
-                            : 'text-inkBody hover:bg-navHover hover:text-ink',
+                            ? 'bg-surface font-semibold text-ink shadow-[inset_3px_0_0_hsl(var(--stamp))]'
+                            : 'text-inkBody hover:translate-x-0.5 hover:bg-navHover hover:text-ink',
                         )
                       }
                     >
@@ -132,7 +135,11 @@ export function AppLayout() {
         </div>
 
         <main className="min-h-0 min-w-0 px-4 pb-6 md:overflow-y-auto md:pl-2">
-          <div className="flex flex-col gap-4 pt-3.5">
+          {/* La clave por ruta reinicia la animación de entrada en cada pantalla. */}
+          <div
+            key={location.pathname}
+            className="flex flex-col gap-4 pt-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
+          >
             <Outlet />
           </div>
         </main>

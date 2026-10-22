@@ -11,7 +11,7 @@ interface HeroPanelProps {
 /** Panel teñido de la parte alta de una pantalla: lo que hay que atender hoy. */
 export function HeroPanel({ title, description, aside, children }: HeroPanelProps) {
   return (
-    <section className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 rounded-2xl bg-hero px-7 py-6">
+    <section className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 rounded-2xl bg-hero px-5 py-6 animate-in fade-in zoom-in-95 duration-300 sm:px-7">
       <div className="min-w-[280px] flex-1">
         <h2 className="font-display text-22 font-bold tracking-[-0.01em] text-ink">{title}</h2>
         <p className="mt-1.5 max-w-[540px] text-14 leading-relaxed text-inkDeep">{description}</p>
@@ -25,7 +25,7 @@ export function HeroPanel({ title, description, aside, children }: HeroPanelProp
 /** Pastilla blanca con un dato, para el costado del panel. */
 export function HeroCard({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
-    <div className="w-[190px] rounded-lg bg-surface px-4 py-3.5">
+    <div className="w-full rounded-lg bg-surface px-4 py-3.5 transition-transform duration-200 ease-in-out hover:-translate-y-0.5 sm:w-[190px]">
       <div className="text-12 text-inkSoft">{label}</div>
       <div className="mt-1.5 font-display text-15 font-semibold leading-snug text-ink">
         {children}

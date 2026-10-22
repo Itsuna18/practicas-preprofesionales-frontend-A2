@@ -80,8 +80,21 @@ export function ErrorState({ children }: { children: ReactNode }) {
   )
 }
 
+const SKELETON_BAR =
+  'h-3 rounded-full bg-[linear-gradient(90deg,hsl(var(--soft))_0%,hsl(var(--well))_50%,hsl(var(--soft))_100%)] bg-[length:200%_100%] animate-shimmer'
+
+/** Esqueleto con brillo mientras carga; el texto lo anuncian los lectores de pantalla. */
 export function LoadingState({ children }: { children: ReactNode }) {
-  return <p className="px-5 py-14 text-center text-14 text-inkSoft">{children}</p>
+  return (
+    <div role="status" className="flex flex-col items-center gap-3 px-5 py-12">
+      <div aria-hidden="true" className="flex w-full max-w-sm flex-col gap-2.5">
+        <span className={`${SKELETON_BAR} w-3/4`} />
+        <span className={`${SKELETON_BAR} w-full`} />
+        <span className={`${SKELETON_BAR} w-5/6`} />
+      </div>
+      <p className="text-center text-14 text-inkSoft">{children}</p>
+    </div>
+  )
 }
 
 interface AsyncSectionProps<T> {
