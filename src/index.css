@@ -113,6 +113,8 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      /* Sin esto, las animaciones infinitas (formas que flotan) parpadean. */
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
   }

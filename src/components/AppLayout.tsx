@@ -72,10 +72,17 @@ export function AppLayout() {
   const navGroups = role ? NAV_BY_ROLE[role] : []
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper md:h-screen md:overflow-hidden">
-      <header className="flex h-topbar flex-none items-center gap-4 border-b-2 border-stamp bg-surface px-[18px]">
+    <div className="flex min-h-screen flex-col bg-paper bg-[radial-gradient(ellipse_70%_45%_at_100%_0%,hsl(var(--hero))_0%,transparent_65%),radial-gradient(ellipse_50%_40%_at_0%_100%,hsl(var(--chip-stamp))_0%,transparent_60%)] md:h-screen md:overflow-hidden">
+      <header className="sticky top-0 z-30 flex h-topbar flex-none items-center gap-4 border-b border-line/70 bg-surface/80 px-[18px] backdrop-blur-xl supports-[backdrop-filter]:bg-surface/70">
+        {/* Línea de acento con el degradado de la marca. */}
+        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-stamp via-sky-500 to-cyan-400 opacity-80" />
         <div className="flex flex-none items-center gap-2.5">
-          <span aria-hidden="true" className="block size-[22px] rounded-md bg-stamp" />
+          <span
+            aria-hidden="true"
+            className="relative block size-[24px] rotate-6 rounded-md bg-gradient-to-br from-stamp to-sky-500 shadow-sm transition-transform duration-300 hover:rotate-0"
+          >
+            <span className="absolute inset-[5px] rounded-[3px] bg-surface/30" />
+          </span>
           <span className="font-display text-17 font-bold tracking-[-0.02em] text-ink">
             prácticas.
           </span>

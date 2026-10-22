@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Inbox, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface PanelProps {
@@ -11,7 +12,12 @@ interface PanelProps {
 /** Contenedor blanco de esquinas grandes: la caja base de listados y tablas. */
 export function Panel({ toolbar, children, className }: PanelProps) {
   return (
-    <div className={cn('overflow-hidden rounded-2xl bg-surface', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-2xl border border-line/60 bg-surface shadow-[0_1px_3px_hsl(var(--scrim)/0.06)] transition-shadow duration-300 hover:shadow-[0_8px_28px_-14px_hsl(var(--scrim)/0.25)]',
+        className,
+      )}
+    >
       {toolbar ? (
         <div className="flex flex-wrap items-center gap-2 border-b border-paperRule px-[18px] py-3.5">
           {toolbar}
@@ -59,11 +65,18 @@ interface EmptyStateProps {
   title: ReactNode
   description?: ReactNode
   action?: ReactNode
+  /** Ícono de la ilustración; por defecto, una bandeja vacía. */
+  icon?: LucideIcon
 }
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({ title, description, action, icon: Icon = Inbox }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-1.5 px-5 py-14 text-center">
+    <div className="flex flex-col items-center gap-1.5 px-5 py-14 text-center animate-in fade-in zoom-in-95 duration-500">
+      <span aria-hidden="true" className="relative mb-3 flex size-16 items-center justify-center">
+        <span className="absolute inset-0 rounded-full bg-chipStamp" />
+        <span className="absolute inset-0 rounded-full bg-chipStamp opacity-60 animate-ping [animation-duration:2.4s] [animation-iteration-count:2]" />
+        <Icon className="relative size-7 text-stamp animate-float" />
+      </span>
       <p className="font-display text-16 font-semibold text-ink">{title}</p>
       {description ? <p className="text-14 text-inkMid">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}
